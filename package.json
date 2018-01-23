@@ -1,0 +1,44 @@
+{
+  "name": "cgil-vue-olmap",
+  "version": "1.0.0",
+  "description": "A Vue.js OpenLayers Map Component to be used in Goeland",
+  "main": "dist/cgil-vue-olmap.js",
+  "scripts": {
+    "start": "poi src/index.js --no-clear",
+    "build": "poi build src/index.js",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lao-tseu-is-alive/cgil-vue-olmap.git"
+  },
+  "keywords": [
+    "goeland",
+    "vue",
+    "openlayers",
+    "map",
+    "component"
+  ],
+  "author": "cgil",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lao-tseu-is-alive/cgil-vue-olmap/issues"
+  },
+  "homepage": "https://github.com/lao-tseu-is-alive/cgil-vue-olmap#readme",
+  "dependencies": {
+    "cgil-html-utils": "^1.0.3",
+    "cgil-log": "^1.0.3",
+    "cgil-vue-autocomplete": "^1.0.1",
+    "element-ui": "^2.0.11",
+    "ol": "^4.6.4",
+    "proj4": "^2.4.4",
+    "vue": "^2.5.13"
+  },
+  "devDependencies": {
+    "babel-preset-stage-2": "^6.24.1",
+    "jest": "^22.1.4",
+    "node-sass": "^4.7.2",
+    "poi": "^9.6.13",
+    "sass-loader": "^6.0.6"
+  }
+}
