@@ -2,23 +2,33 @@
 html {
     body {
         margin: 0;
-        padding: 0;        
+        padding: 0; 
+        width: 100%;
+        height: 100%; 
+        div {
+           
+            
+            margin: 0;
+            padding: 0;  
+            h1,h2 {
+                padding: 0.1rem 1rem;
+            }
+        }      
     }
-    h1,h2 {
-        padding: 0.1rem 1rem;
-    }
+    
 }
-.my-map {   
+.my-map {  
+    position: relative; 
     box-sizing: border-box;
     width: 100%;
-    height: 100%;
+    height: 650px;
     border: 1px solid black;
 }
 </style>
 
 <template>
   <div>
-    <h2>{{title}}</h2>
+   
     <div class="my-map">
     <cgil-ol-map :edit-geom-enabled="true"></cgil-ol-map>
     </div>

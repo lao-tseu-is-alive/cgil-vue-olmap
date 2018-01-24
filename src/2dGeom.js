@@ -1,25 +1,68 @@
 /*
- mini 2d geometry helpers functions
- https://martin-thoma.com/how-to-check-if-two-line-segments-intersect/
- https://algs4.cs.princeton.edu/91primitives/
- i did have a look also on this one but i did not use it : https://www.npmjs.com/package/2d-polygon-self-intersections
+ Minimal 2d polygonSelfIntersect geometry helper function
+ I wrote this one mainly to be used while a user digitize a polygon in openlayers
+ to check if a new point can be considered valid and accepted
+ code is inspired by work and informations found on :
+ 1) article from Martin Thoma available here : https://martin-thoma.com/how-to-check-if-two-line-segments-intersect/
+ 2) https://algs4.cs.princeton.edu/91primitives/
+
+ i did have also a look on this much complete (and complex) package from Elijah Insua :
+ https://www.npmjs.com/package/2d-polygon-self-intersections
+ but i did not use it because I just need true or false, and don't need any callback
+ function on any intersection, nor do i need 2 other dependencies
  */
+import CgLog from 'cgil-log'
+
+export const PRECISION = 10
+export const EPSILON = Number(`1e-${PRECISION}`)  // 1e-10 or 0.0000000001
+let Log = new CgLog('cgil-2d-geom-utils')
 
 /**
- * very simplistic Point class
+ * pointsIsEqual allow to know if two array points are equal (difference lower then EPSILON)
+ * @param {array} p0 an array [x,y] representing a point in cartesian 2D space
+ * @param {array} p1 an array [x,y] representing a point in cartesian 2D space
+ * @return {boolean}  true if p0 and p1 are equal false elsewhere
+ */
+export function pointsIsEqual (p0, p1) {
+  return (
+    (Math.abs(p0[0] - p1[0]) <= EPSILON) &&
+    (Math.abs(p0[1] - p1[1]) <= EPSILON)
+  )
+}
+
+/**
+ * distance2Point gives the distance in 2D space between 2 points
+ * @param p0 an array [x,y] representing a point in cartesian 2D space
+ * @param p1 an array [x,y] representing a point in cartesian 2D space
+ * @return {number} the distance in 2D cartesian space between p0 and p1
+ */
+export function distance2Point (p0, p1) {
+  return (Math.sqrt(
+      ((p0[0] - p1[0]) * (p0[0] - p1[0])) +
+      ((p0[1] - p1[1]) * (p0[1] - p1[1]))
+    )
+  )
+}
+
+/**
+ * Simplistic Point class to be used only in polygonSelfIntersect
  */
 class Point {
   constructor (x, y, name = '') {
     this.x = x
     this.y = y
-    this.name = name // for debug purpose
+    this.name = name // mainly for debug purpose
   }
 }
+
+/**
+ * Simplistic Segment class to be used only in polygonSelfIntersect
+ */
 class Segment {
   constructor (p1, p2, name = '') {
     this.p1 = p1
     this.p2 = p2
-    this.name = name // for debug purpose
+    this.name = name // mainly for debug purpose
   }
 }
 
@@ -38,7 +81,7 @@ function intersects (l1, l2) {
 }
 
 /**
- * polygonSelfIntersect allows to know if a polygon as self-intersection
+ * polygonSelfIntersect allows to know if a polygon as a self-intersection
  * @param arr2DPolygonCoords array of x,y coordinates values from the vertices of external ring of a closed Polygon (last two x,y values should be equal to first)
  * @return {boolean} true if there is a self-intersection in the polygon.  false elsewhere
  */
@@ -60,10 +103,10 @@ export function polygonSelfIntersect (arr2DPolygonCoords) {
       // console.log(i,j,Segments[i],Segments[j])
       if (!((i === 0) && (j === (Segments.length - 1)))) { // no need to test connection from first segment with last one
         if (intersects(Segments[i], Segments[j])) {
-          console.log(`%c WARNING Segment ${Segments[i].name} intersects with ${Segments[j].name}`, 'background: #222; color: #bada55')
+          Log.w(`WARNING Segment ${Segments[i].name} intersects with ${Segments[j].name}`)
           return true
         } else {
-          console.log(`%c OK Segment ${Segments[i].name} does not intersects with ${Segments[j].name}`, 'background: #00ff33; color: #111')
+          Log.l(`OK Segment ${Segments[i].name} does not intersects with ${Segments[j].name}`)
         }
       }
     }

@@ -78,7 +78,7 @@
     <el-container>
       <el-header height="32px">
         <el-button-group v-show="editGeomEnabled">
-          <!-- 
+          <!--
           <el-button id="cmdClear" type="warning" size="small" round @click="clearNewFeatures">Clear</el-button>
           -->
 
@@ -89,7 +89,8 @@
               v-for="item in modeOptions"
               :key="item.value"
               :label="item.label"
-              :value="item.value"></el-option>
+              :value="item.value">
+            </el-option>
           </el-select>
           <el-radio-group v-if="!isSmallScreen" v-model="uiMode" v-on:change="changeMode" :size="sizeOfControl"
                           title="Cliquez pour sélectionner le mode de travail">
@@ -100,14 +101,15 @@
         </el-button-group>
         <el-button id="cmdSave" v-show="editGeomEnabled" type="warning" :size="sizeOfControl"  @click="saveNewFeatures">Sauver</el-button>
         <span class="gostatus" v-show="(getNumPolygons > 0)">{{getNumPolygons}} Polygones</span>
-        <el-select id="layerSelector" :size="sizeOfControl" style="float: right"
+        <el-select v-if="!isSmallScreen" id="layerSelector" :size="sizeOfControl" style="float: right"
                    v-on:change="changeLayer" v-model="activeLayer"
                    title="Cliquez pour sélectionner le fond de plan">
           <el-option
             v-for="item in layerOptions"
             :key="item.value"
             :label="item.label"
-            :value="item.value"></el-option>
+            :value="item.value">
+          </el-option>
         </el-select>
       </el-header>
     </el-container>
@@ -144,6 +146,7 @@
   //this.$Vue.components(Container.name, Container)
 
   const positionGareLausanne = [537892.8, 152095.7]
+  const SMALL_SCREEN_WIDTH = 626
 
   export default {
     name: 'vue2MapOlSwiss21781',
@@ -392,7 +395,7 @@
       window.onresize = () => {
         // this.$refs.mymap.clientHeight = window.innerHeight - 60
         // console.log(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
-        if (this.$refs.mymap.clientWidth < 626) {
+        if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
           this.isSmallScreen = true
           this.sizeOfControl = 'mini'
         } else {

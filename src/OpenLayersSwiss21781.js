@@ -31,9 +31,7 @@ import OlStroke from 'ol/style/stroke'
 import OlStyle from 'ol/style/style'
 import OlTileGridWMTS from 'ol/tilegrid/wmts'
 import proj4 from 'proj4'
-import {polygonSelfIntersect} from './2dGeom'
-export const PRECISION = 10
-export const EPSILON = Number(`1e-${PRECISION}`)  // 1e-10 or 0.0000000001
+import {distance2Point, pointsIsEqual, EPSILON, polygonSelfIntersect} from './2dGeom'
 // in EPSG:21781 we don't want to allow points of same polygon in same cm
 export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
 export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
@@ -675,7 +673,8 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
             polygonFeature.setId(id + baseCounter)
             source.addFeature(polygonFeature)
           } else {
-            console.log('## Error POLYGON IS NOT VALID')
+            console.log('## Error MULTIPOLYGON IS NOT VALID')
+            return null
           }
         })
         break
@@ -687,6 +686,7 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
           source.addFeature(feature)
         } else {
           console.log('## Error POLYGON IS NOT VALID')
+          return null
         }
         break
       default:
@@ -697,24 +697,9 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
   }
 }
 
-export function pointsIsEqual (p0, p1) {
-  return (
-    (Math.abs(p0[0] - p1[0]) <= EPSILON) &&
-    (Math.abs(p0[1] - p1[1]) <= EPSILON)
-  )
-}
-
-export function distance2Point (p0, p1) {
-  return (Math.sqrt(
-    ((p0[0] - p1[0]) * (p0[0] - p1[0])) +
-    ((p0[1] - p1[1]) * (p0[1] - p1[1]))
-    )
-  )
-}
-
 export function isPointDistanceOkForPolygon (p0, p1) {
   let distance = distance2Point(p0, p1)
-  if (distance <= EPSILON) return true // comparing same point
+  if (distance <= EPSILON) return true // comparing same point, probably start and end point
   if (distance > MIN_DISTANCE_BETWEEN_POINTS) return true
   return false
 }
@@ -724,7 +709,7 @@ export function isPointDistanceOkForPolygon (p0, p1) {
  * 0) the feature is of type Polygon
  * 1) No point of the polygons are nearest then MIN_DISTANCE_BETWEEN_POINTS of another point of this polygon
  * 2) No self-intersection etc like topologically valid, according to the OGC SFS specification
- * 3) No point of the polygons are inside another polygon
+ * 3) No point of the polygons are inside another polygon (NOT DONE IN THIS VERSION)
  * @param {ol.Feature} olFeature : the feature of geometry type Polygon you want to check
  * @param {array} clickPoint : 2d array with x,y coordinates of last point modified
  * @return {boolean} : true if the polygon is valid
