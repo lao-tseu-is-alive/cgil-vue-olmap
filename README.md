@@ -16,9 +16,8 @@ Depending on the attributes you set to this component you can :
 
 The npm bundle in is compiled with [POI](https://poi.js.org/) in CommonJS2 so that you can use it in another build tool, the bundle DOES NOT INCLUDE all modules in node_modules folder. 
 This is done to avoid duplication of node_modules  when you build your own bundle.
-But it also means that you MUST install the dependencies yourself in your project.
 
-> THIS IS NOT AN UMD JS BUNDLE ! so YOU CANNOT USE IT AS IS IN YOUR BROWSER
+> THIS IS NOT AN UMD JS BUNDLE ! so... YOU CANNOT USE IT 'AS IS' IN YOUR BROWSER
 
 As soon as I got time for this i will try to prepare an UMD build with POI or Bili.
 Feel free to check out the code from github and try to do it yourself if you need an "huge" UMD bundle.
@@ -29,15 +28,74 @@ You can check the [online example demo](https://map.gil.town/)
 
 ## Getting Started
 
-Install `cgil-vue-olmap` in the shell
+you can start a new vue test project with vue-cli like this
+```bash
+vue init webpack
+```
+answer the questions then install `cgil-vue-olmap` and the element-ui dependency from the shell
 
 ```bash
-npm install cgil-vue-olmap --save
+npm install cgil-vue-olmap element-ui --save
+npm run dev 
 ```
 
-Then import the vue component and use it in your code !
+>edit  the src/App.vue like this :
+```html
+<template>
+  <div id="app">
+      <cgil-ol-map :edit-geom-enabled="true"></cgil-ol-map> 
+  </div>
+</template>
 
-here is an example of code to test this in vue:
+<script>
+import 'cgil-vue-olmap/dist/cgil-vue-olmap.css'
+import cgilOlMap from 'cgil-vue-olmap'
+
+export default {
+  name: 'App',
+  components: {  cgilOlMap  }
+}
+</script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 0px;
+}
+</style>
+
+```
+>edit  the src/main.js like this :
+```javascript
+
+// The Vue build version to load with the `import` command
+// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+import Vue from 'vue'
+import ElementUI from 'element-ui'
+import 'element-ui/lib/theme-chalk/index.css'
+import App from './App.vue'
+Vue.use(ElementUI)
+
+Vue.config.productionTip = false
+
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  components: { App },
+  template: '<App/>'
+})
+
+```
+
+
+
+
+
+here is another example of code with two instance of the component in vue:
 
 ```html
 <style lang="scss">
@@ -85,7 +143,8 @@ here is an example of code to test this in vue:
   </div>
 </template>
 
-<script>
+<script>  
+  import 'cgil-vue-olmap/dist/cgil-vue-olmap.css'
   import cgilOlMap from 'cgil-vue-olmap'
   export default {
     name: 'testvue2MapOlSwiss21781',
