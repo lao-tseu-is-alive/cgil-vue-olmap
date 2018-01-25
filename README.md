@@ -1,6 +1,6 @@
 # cgil-vue-olmap
 
-> VueJs component allows to display an interactive map of Lausanne in Switzerland with one tag !  
+> this VueJs component allows to display an interactive map of Lausanne in Switzerland with one tag !  
 
 The original purpose of this component is to be used in Goeland.
 
@@ -13,6 +13,15 @@ Depending on the attributes you set to this component you can :
 2. fix the initial postion 'center' an Array [x,y] (default: () => (positionGareLausanne)
 3. activate the Polygon Creation/Edition Toolbar with 'editGeomEnabled' a Boolean (default: false)
 4. Pass an initial valid WKT Polygon or Multi Polygon Geometry to display in 'geomWkt'
+
+The npm bundle in is compiled with ![alt text](https://poi.js.org/ "POI") in CommonJS2 so that you can use it in another build tool, the bundle DOES NOT INCLUDE all modules in node_modules folder. 
+This is done to avoid duplication of node_modules  when you build your own bundle.
+But it also means that you MUST install the dependencies yourself in your project.
+
+> THIS IS NOT AN UMD JS BUNDLE ! so YOU CANNOT USE IT AS IS IN YOUR BROWSER
+
+As soon as I got time for this i will try to prepare an UMD build with POI or Bili.
+Feel free to check out the code from github and try to do it yourself if you need an "huge" UMD bundle.
 
 You can check the [online example demo](https://map.gil.town/)
 
@@ -77,7 +86,7 @@ here is an example of code to test this in vue:
 </template>
 
 <script>
-  import cgilOlMap from './cgil-vue-olmap/src/cgil-vue-olmap'
+  import cgilOlMap from 'cgil-vue-olmap'
   export default {
     name: 'testvue2MapOlSwiss21781',
     components: {cgilOlMap},

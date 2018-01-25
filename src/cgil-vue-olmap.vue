@@ -121,8 +121,13 @@
 
 <script>
   import {DEV, geoJSONUrl} from './config'
+  /* TODO : test a way to include only what i need from element-ui
+   in the mean time you need to 
+   import ElementUI from 'element-ui'
+   import 'element-ui/lib/theme-chalk/index.css'
+   Vue.use(ElementUI)
   import {Button, ButtonGroup, Container, Header, RadioGroup, Select, Option } from 'element-ui'
-  
+  */
   import OlCollection from 'ol/collection'
   import OlFormatWKT from 'ol/format/wkt'
   import {isNullOrUndefined, dumpObject2String} from 'cgil-html-utils'
@@ -149,8 +154,9 @@
   const SMALL_SCREEN_WIDTH = 626
 
   export default {
-    name: 'vue2MapOlSwiss21781',
-    components: {Button, Container, Header, RadioGroup, Select, Option},
+    name: 'vue2MapOlSwiss21781',    
+    // components: {Button, Container, Header, RadioGroup, Select, Option},
+    components: {},
     data () {
       return {
         msg: 'Basic OpenLayers Map',

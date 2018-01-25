@@ -5,7 +5,7 @@
   "main": "dist/cgil-vue-olmap.js",
   "scripts": {
     "start": "poi src/index.js --no-clear",
-    "build": "poi build src/index.js",
+    "build": "poi build --config poi.config.js",
     "test": "jest"
   },
   "repository": {

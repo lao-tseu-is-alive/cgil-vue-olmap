@@ -7,7 +7,7 @@
  the bundle here excludes all modules in node_modules folder from bundled files. no need for external defs :-)
  */
 module.exports = {
-  entry: './src/index.js',
+  entry: './src/cgil-vue-olmap.vue',
   filename: {
     js: 'cgil-vue-olmap.js',
     css: 'cgil-vue-olmap.css'
