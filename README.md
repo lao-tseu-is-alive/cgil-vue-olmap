@@ -14,7 +14,7 @@ Depending on the attributes you set to this component you can :
 3. activate the Polygon Creation/Edition Toolbar with 'editGeomEnabled' a Boolean (default: false)
 4. Pass an initial valid WKT Polygon or Multi Polygon Geometry to display in 'geomWkt'
 
-The npm bundle in is compiled with ![alt text](https://poi.js.org/ "POI") in CommonJS2 so that you can use it in another build tool, the bundle DOES NOT INCLUDE all modules in node_modules folder. 
+The npm bundle in is compiled with [POI](https://poi.js.org/) in CommonJS2 so that you can use it in another build tool, the bundle DOES NOT INCLUDE all modules in node_modules folder. 
 This is done to avoid duplication of node_modules  when you build your own bundle.
 But it also means that you MUST install the dependencies yourself in your project.
 
