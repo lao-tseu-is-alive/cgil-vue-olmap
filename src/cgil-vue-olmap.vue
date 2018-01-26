@@ -3,12 +3,12 @@
 
   @import "./ol.css";
 
-  $toolbar_height: 2.0em;
-  $button_size: 1.5em;
+  $toolbar_height: 2.0rem;
+  $button_size: 1.6rem;
 
   .main {
     width: 100%;
-    height: 97%;
+    height: 99%;
     margin: 0px;
     padding: 0px;
     overflow: hidden;
@@ -64,7 +64,7 @@
     background-color: rgba(0,60,136,0.5);
     color: #333;
     text-align: left;
-    line-height: 25px;
+    //line-height: 25px;
   }
   .el-select-dropdown__item{
    font-family: Arial ;
@@ -76,7 +76,7 @@
   <div class="main">
     <slot></slot>
     <el-container>
-      <el-header height="32px">
+      <el-header :height="toolbarHeight">
         <el-button-group v-show="editGeomEnabled">
           <!--
           <el-button id="cmdClear" type="warning" size="small" round @click="clearNewFeatures">Clear</el-button>
@@ -101,26 +101,39 @@
         </el-button-group>
         <el-button id="cmdSave" v-show="editGeomEnabled" type="warning" :size="sizeOfControl"  @click="saveNewFeatures">Sauver</el-button>
         <span class="gostatus" v-show="(getNumPolygons > 0)">{{getNumPolygons}} Polygones</span>
-        <el-select v-if="!isSmallScreen" id="layerSelector" :size="sizeOfControl" style="float: right"
+        <el-button  :size="sizeOfControl" type="primary" icon="el-icon-search">Search</el-button>
+        <el-select v-if="!isSmallScreen" id="layerSelector" :size="sizeOfControl"
+                   style="float: right"
                    v-on:change="changeLayer" v-model="activeLayer"
                    title="Cliquez pour sélectionner le fond de plan">
           <el-option
-            v-for="item in layerOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value">
+                  v-for="item in layerOptions"
+                  :key="item.value"
+                  :label="item.label"
+                  :value="item.value">
           </el-option>
         </el-select>
+        <cg-vue-auto-complete
+                placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                :ajax-data-source="geoAdrUrl"
+                v-model="addressFound"
+                @input="gotoSelectedAdr"
+                @errorajax="aNetworkProblemHappened"
+        ></cg-vue-auto-complete>
+
       </el-header>
+      <el-main>
+        <div ref="mymap" class="map-content"></div>
+      </el-main>
     </el-container>
 
 
-    <div ref="mymap" class="map-content"></div>
+
   </div>
 </template>
 
 <script>
-  import {DEV, geoJSONUrl} from './config'
+  import {DEV, BASE_REST_API_URL, geoJSONUrl} from './config'
   /* TODO : test a way to include only what i need from element-ui
    in the mean time you need to 
    import ElementUI from 'element-ui'
@@ -131,6 +144,13 @@
   import OlCollection from 'ol/collection'
   import OlFormatWKT from 'ol/format/wkt'
   import {isNullOrUndefined, dumpObject2String} from 'cgil-html-utils'
+  import Log from 'cgil-log'
+  import cgVueAutoComplete from './cgil-vue-autocomplete.vue'
+  // import cgVueAutoComplete from 'cgil-vue-autocomplete'
+  // import   'cgil-vue-autocomplete/dist/cgil-vue-autocomplete.css'
+
+
+
   import {
     getOlView,
     getOlMap,
@@ -152,14 +172,16 @@
 
   const positionGareLausanne = [537892.8, 152095.7]
   const SMALL_SCREEN_WIDTH = 626
+  const log = new Log('cgilVueOlMap', 4)
 
   export default {
     name: 'vue2MapOlSwiss21781',    
     // components: {Button, Container, Header, RadioGroup, Select, Option},
-    components: {},
+    components: {cgVueAutoComplete},
     data () {
       return {
         msg: 'Basic OpenLayers Map',
+        toolbarHeight: 34,
         isSmallScreen: false,
         sizeOfControl: 'small',
         uiMode: 'NAVIGATE',
@@ -172,6 +194,8 @@
         ol_newFeaturesLayer: null, // Vector Layer for storing new features
         ol_Active_Interactions: [],
         activeLayer: 'fonds_geo_osm_bdcad_couleur',
+        addressFound: null,  // selected address to search
+        geoAdrUrl: BASE_REST_API_URL + 'adresses/search_position?query=', // backend to find address
         modeOptions: [{
           value: 'NAVIGATE',
           label: 'Navigation'
@@ -340,6 +364,20 @@
           ]),
           type: type
         })
+      },
+      gotoSelectedAdr: function (objSelected) {
+        log.t(`# doSomethingWithSelectedAdr`, objSelected)
+        if (!isNullOrUndefined(objSelected)) {
+          // this.arrSelectionsAdresse.push(objSelected)
+          if (!isNullOrUndefined(objSelected.id)){
+            const arrCoords = objSelected.id.split('_')
+            const newPos = [arrCoords[0], arrCoords[1]]
+            this.ol_view.setCenter(newPos)
+          }
+        }
+      },
+      aNetworkProblemHappened: function (msg) {
+        log.e(`aNetworkProblemHappened --> ${msg}`)
       }
     },
     mounted () {

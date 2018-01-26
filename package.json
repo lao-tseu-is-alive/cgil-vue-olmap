@@ -4,7 +4,7 @@
   "description": "A Vue.js OpenLayers Map Component to be used in Goeland",
   "main": "dist/cgil-vue-olmap.js",
   "scripts": {
-    "start": "poi src/index.js --no-clear",
+    "start": "poi src/index.js --no-clear --config poi.devconfig.js",
     "build": "poi build --config poi.config.js",
     "test": "jest"
   },
@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/lao-tseu-is-alive/cgil-vue-olmap#readme",
   "dependencies": {
+    "axios": "^0.17.1",
     "cgil-html-utils": "^1.0.3",
     "cgil-log": "^1.0.3",
     "cgil-vue-autocomplete": "^1.0.1",

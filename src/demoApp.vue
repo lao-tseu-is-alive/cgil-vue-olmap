@@ -30,19 +30,27 @@ html {
   <div>
    
     <div class="my-map">
-    <cgil-ol-map :edit-geom-enabled="true"></cgil-ol-map>
+    <cgil-ol-map
+            :edit-geom-enabled="true"
+            :center="center"
+            :zoom="8"
+    ></cgil-ol-map>
     </div>
   </div>
 </template>
 
 <script>
 import cgilOlMap from './cgil-vue-olmap'
+const pos = [538350.5 , 152669.0] // cathedrale Lausanne
 export default {
     components: {
         cgilOlMap
     },
   data() {
-    return { title: 'Testing cgil-vue-olmap' }
+    return {
+      title: 'Testing cgil-vue-olmap',
+      center: pos
+    }
   }
 }
 </script>
