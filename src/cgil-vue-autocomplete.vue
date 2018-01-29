@@ -1,46 +1,39 @@
 <template>
-  <div>
-    <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-      <symbol xmlns="http://www.w3.org/2000/svg" id="sbx-icon-search-6" viewBox="0 0 40 40">
-        <path
-          d="M28.295 32.517c-2.93 2.086-6.51 3.312-10.38 3.312C8.02 35.83 0 27.81 0 17.914 0 8.02 8.02 0 17.915 0 27.81 0 35.83 8.02 35.83 17.915c0 3.87-1.227 7.45-3.313 10.38l6.61 6.61c1.166 1.165 1.163 3.057 0 4.22-1.167 1.167-3.057 1.167-4.226-.002l-6.605-6.606zm-10.38.326c8.245 0 14.928-6.683 14.928-14.928 0-8.245-6.683-14.93-14.928-14.93-8.245 0-14.93 6.685-14.93 14.93 0 8.245 6.685 14.928 14.93 14.928zm0-26.573c-6.43 0-11.645 5.214-11.645 11.645 0 .494.4.895.896.895.495 0 .896-.4.896-.895 0-5.442 4.41-9.853 9.853-9.853.494 0 .895-.4.895-.896 0-.495-.4-.896-.895-.896z"
-          fill-rule="evenodd"></path>
-      </symbol>
-      <symbol xmlns="http://www.w3.org/2000/svg" id="sbx-icon-clear-5" viewBox="0 0 20 20">
-        <path
-          d="M10 20c5.523 0 10-4.477 10-10S15.523 0 10 0 0 4.477 0 10s4.477 10 10 10zm1.35-10.123l3.567 3.568-1.225 1.226-3.57-3.568-3.567 3.57-1.226-1.227 3.568-3.568-3.57-3.57 1.227-1.224 3.568 3.568 3.57-3.567 1.224 1.225-3.568 3.57zM10 18.272c4.568 0 8.272-3.704 8.272-8.272S14.568 1.728 10 1.728 1.728 5.432 1.728 10 5.432 18.272 10 18.272z"
-          fill-rule="evenodd"></path>
-      </symbol>
-    </svg>
-    <div id='formFeedBack' class="alert alert-danger" v-if="isError">
-      <strong>{{errMsg}}</strong>
-    </div>
-    <!--
-    <form novalidate="novalidate" onsubmit="return false;" class="searchbox sbx-custom">
-      <div role="search" class="sbx-google__wrapper">
-      -->
-        <el-input type="search" name="search" ref="search" v-model='searchText' @keydown.enter="enter"
-               @keydown.tab="close" @keydown.up="up"
-               @keydown.down="down" @keydown.esc="close" @keyup='update'
-               @focus="gotFocus()"
-               class="sbx-custom__input"
-               v-bind:class="{isloading : isAjaxCallRunning}"
-               :placeholder="placeholder"
-                  required="required"></el-input>
+    <div>
+        <div id='formFeedBack' class="alert alert-danger" v-if="isError">
+            <strong>{{errMsg}}</strong>
+        </div>
+
+        <el-input name="search" ref="search" :size="size"
+                  prefix-icon="el-icon-search" clearable
+                  v-model='searchText' @keydown.enter="enter"
+                  @keydown.tab="close" @keydown.up="up"
+                  @keydown.down="down" @keydown.esc="close" @keyup='update'
+                  @focus="gotFocus()"
+                  v-bind:class="{isloading : isAjaxCallRunning}"
+                  :placeholder="placeholder"
+                  required="required">
+        </el-input>
+
 
 
         <ul v-if="showSugestions" ref='suggestion' class="suggestion" tabindex="0">
-          <template v-for="(result, key) in arrResults">
-            <li :key="key" :data="result.id" @click.prevent="itemSelected(result, $event)" class="suggestion-item"
-                :class="{'suggestionitem__selected' : isSelected(key) }">{{ result[labelFieldName] }}
-            </li>
-          </template>
+            <template v-for="(result, key) in arrResults">
+                <li :key="key" :data="result.id" @click.prevent="itemSelected(result, $event)" class="suggestion-item"
+                    :class="{'suggestionitem__selected' : isSelected(key) }">{{ result[labelFieldName] }}
+                </li>
+            </template>
         </ul>
-    <!--
-      </div>
-    </form>
-    -->
-  </div>
+        <!--
+        <el-autocomplete
+                prefix-icon="el-icon-search" clearable :size="size"
+                v-model="searchText"
+                :fetch-suggestions="getData"
+                :placeholder="placeholder"
+                @select="handleSelect"
+        ></el-autocomplete>
+        -->
+    </div>
 </template>
 
 <script>
@@ -97,6 +90,10 @@
       isAjaxDataSourceWithFilter: {
         type: Boolean,
         default: true
+      },
+      size: {
+        type: String,
+        default: 'small'
       }
     }, // end of props section
     watch: {
@@ -145,9 +142,33 @@
       log.t(`### mounted src: ${this.ajaxDataSource} , with filter? ${this.isAjaxDataSourceWithFilter}`)
     }, // end of created section
     methods: {
-      getData: debounce(function (query = '') {
+      handleSearch: function(query, cb) {
+        log.l(`## In handleSearch`, query, cb)
+        let search = query.trim()
+        if (this.isAjaxDataSourceWithFilter) {
+          if (search.length < minChars) {
+            this.arrResults = []
+          }
+          if (search !== this.previousSearch && this.selected.length < 1) {
+            this.previousSearch = search
+            if (search.length > minChars) {
+              this.getData(search)
+            }
+          } else {
+            // probably user pressed space
+            if (!this.showSugestions && (this.arrResults.length > 1)) {
+              this.showSugestions = true
+            }
+          }
+        }
+
+      },
+      handleSelect: function(item) {
+        log.l(`## In handleSelect`, item)
+      },
+      getData: debounce(function (query = '',cb = null) {
         var that = this
-        log.l(`## In getData debounce CALLBACK : "${query}"`)
+        log.l(`## In getData debounce CALLBACK : "${query}"`, query, cb)
         if (that.arrAxiosSource.length > 0) {
           that.arrAxiosSource.map(function (s) {
             s.cancel()
@@ -324,41 +345,41 @@
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 
-  .suggestion {
-    margin: 0;
-    padding: 0;
-    list-style-type: none;
-    z-index: 1000;
-    position: absolute;
-    max-height: 400px;
-    overflow-y: auto;
-    background: #fff;
-    width: 100%;
-    border: 1px solid #ccc;
-    border-top: 0;
-    color: #000;
-    text-align: left;
+    .suggestion {
+        margin: 0;
+        padding: 0;
+        list-style-type: none;
+        z-index: 1000;
+        position: absolute;
+        max-height: 400px;
+        overflow-y: auto;
+        background: #fff;
+        width: 100%;
+        border: 1px solid #ccc;
+        border-top: 0;
+        color: #000;
+        text-align: left;
 
-  }
+    }
 
-  .suggestion-item {
-    cursor: pointer;
-    list-style-type: none;
-    padding-left: 10px;
-  }
+    .suggestion-item {
+        cursor: pointer;
+        list-style-type: none;
+        padding-left: 10px;
+    }
 
-  .suggestion-item:hover {
-    background: rgba(0, 180, 255, .075);
-  }
+    .suggestion-item:hover {
+        background: rgba(0, 180, 255, .075);
+    }
 
-  .suggestionitem__selected {
-    background: rgba(0, 150, 255, .075);
-    border: #3E82F7 solid 1px;
-  }
+    .suggestionitem__selected {
+        background: rgba(0, 150, 255, .075);
+        border: #3E82F7 solid 1px;
+    }
 
-  .isloading {
-    background: white url("./ui-anim_basic_16x16.gif") center no-repeat;
-    background-position-x: 80%;
-  }
+    .isloading {
+        background: white url("./ui-anim_basic_16x16.gif") center no-repeat;
+        background-position-x: 80%;
+    }
 
 </style>

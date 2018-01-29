@@ -21,7 +21,8 @@ html {
     position: relative; 
     box-sizing: border-box;
     width: 100%;
-    height: 650px;
+    height: 900px;
+    padding: 0px;
     border: 1px solid black;
 }
 </style>
