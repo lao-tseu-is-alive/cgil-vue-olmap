@@ -16,7 +16,6 @@
         </el-input>
 
 
-
         <ul v-if="showSugestions" ref='suggestion' class="suggestion" tabindex="0">
             <template v-for="(result, key) in arrResults">
                 <li :key="key" :data="result.id" @click.prevent="itemSelected(result, $event)" class="suggestion-item"
@@ -24,15 +23,6 @@
                 </li>
             </template>
         </ul>
-        <!--
-        <el-autocomplete
-                prefix-icon="el-icon-search" clearable :size="size"
-                v-model="searchText"
-                :fetch-suggestions="getData"
-                :placeholder="placeholder"
-                @select="handleSelect"
-        ></el-autocomplete>
-        -->
     </div>
 </template>
 
@@ -41,7 +31,6 @@
   import {isNullOrUndefined, debounce} from 'cgil-html-utils/src/cgHtmlUtils'
   import Log from 'cgil-log'
   // TODO ajouter case a cocher toute communes oui/non par defaut lausanne si on est sur RECOLTE
-  // TODO remove log in prod
   const log = new Log('cgilVueAutoComplete', 2) // for now limit to warning and error
   const debounceDelay = 350 // in ms
   const minChars = 2
@@ -58,6 +47,7 @@
         isError: false,
         errMsg: '',
         selected: '',
+        ajaxDataSource: null,
         isAjaxCallRunning: false,
         showSugestions: false,
         eventListener: null, // pour detecter click en dehor suggestion
@@ -83,7 +73,7 @@
         type: String,
         default: 'label'
       },
-      ajaxDataSource: {
+      initialAjaxDataSource: {
         type: String,
         default: ''
       },
@@ -132,6 +122,7 @@
       }
     }, // end of watch section
     created: function () {
+      this.ajaxDataSource = this.initialAjaxDataSource
       log.t(`### created src: ${this.ajaxDataSource} , with filter? ${this.isAjaxDataSourceWithFilter}`)
       if (!this.isAjaxDataSourceWithFilter) {
         // we can load once the data from remote server and forget about it
@@ -142,7 +133,11 @@
       log.t(`### mounted src: ${this.ajaxDataSource} , with filter? ${this.isAjaxDataSourceWithFilter}`)
     }, // end of created section
     methods: {
-      handleSearch: function(query, cb) {
+      setAjaxDataSource: function (newAjaxDataSource) {
+        this.ajaxDataSource = newAjaxDataSource
+        log.t(`### setAjaxDataSource src: ${this.ajaxDataSource} , with filter? ${this.isAjaxDataSourceWithFilter}`)
+      },
+      handleSearch: function (query, cb) {
         log.l(`## In handleSearch`, query, cb)
         let search = query.trim()
         if (this.isAjaxDataSourceWithFilter) {
@@ -163,10 +158,10 @@
         }
 
       },
-      handleSelect: function(item) {
+      handleSelect: function (item) {
         log.l(`## In handleSelect`, item)
       },
-      getData: debounce(function (query = '',cb = null) {
+      getData: debounce(function (query = '', cb = null) {
         var that = this
         log.l(`## In getData debounce CALLBACK : "${query}"`, query, cb)
         if (that.arrAxiosSource.length > 0) {

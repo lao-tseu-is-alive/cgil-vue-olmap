@@ -29,7 +29,6 @@
     "axios": "^0.17.1",
     "cgil-html-utils": "^1.0.3",
     "cgil-log": "^1.0.3",
-    "cgil-vue-autocomplete": "^1.0.1",
     "element-ui": "^2.0.11",
     "ol": "^4.6.4",
     "proj4": "^2.4.4",

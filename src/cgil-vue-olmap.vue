@@ -59,6 +59,7 @@
         background-color: #1a1a1a;
         color: yellowgreen;
         padding: 2px;
+        overflow: hidden;
 
     }
 
@@ -76,7 +77,8 @@
     }
 
     .bg-edit-toolbar {
-        background-color: #c0904f;
+        background-color: rgba(0, 60, 136, 0.5);
+        overflow: hidden;
     }
 
 </style>
@@ -144,7 +146,7 @@
                             ></cg-vue-auto-complete>
                         </div>
                     </el-col>
-                    <el-col :xs="0" :sm="1" :md="3" :lg="3" :xl="3">
+                    <el-col :xs="0" :sm="5" :md="3" :lg="3" :xl="3">
                         <div class="grid-content bg-blue hidden-sm-and-down"
                              v-show="!isSmallScreen">
                             <el-select id="layerSelector" :size="sizeOfControl"
@@ -161,19 +163,35 @@
                         </div>
                     </el-col>
                     <!--<el-col :xs="6" :sm="2" :md="0" :lg="0" :xl="0">-->
-                    <el-col :xs="6" :sm="6" :md="0" :lg="0" :xl="0">
-                        <div class="grid-content" v-if="editGeomEnabled" style="margin-right: auto; margin-left: auto">
+                    <el-col :xs="1" :sm="1" :md="1" :lg="1" :xl="1">
+                        <div class="grid-content" style="margin-right: auto; margin-left: auto">
                             <el-button :size="sizeOfControl" type="primary"
                                        @click="toggleConfig()"
                                        style=" float:right; right: 1px;"
-                                       icon="el-icon-setting">Config
+                                       icon="el-icon-setting">
                             </el-button>
                         </div>
-                        <div class="grid-content bg-blue"
-                             v-if="!editGeomEnabled"
-                             >
-                            <el-select id="layerSelector" :size="sizeOfControl"
+                    </el-col>
+                </el-row>
+                <el-card class="box-card">
+                    <el-form label-position="left">
+                        <el-form-item label="Commune pour les adresses:" :size="sizeOfControl">
+                            <el-select v-model="currentOfsFilter" placeholder="Select"
+                                       :size="sizeOfControl"
+                                       style=" float:right; right: 1px;"
+                                       @change="updateOfsFilter">
+                                <el-option
+                                        v-for="item in arrListCities"
+                                        :key="item.ofs"
+                                        :label="item.label"
+                                        :value="item.ofs">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="Choix du fond de plan :" :size="sizeOfControl">
+                            <el-select :size="sizeOfControl"
                                        v-on:change="changeLayer" v-model="activeLayer"
+                                       style=" float:right; right: 1px;"
                                        title="Cliquez pour sélectionner le fond de plan">
                                 <el-option
                                         v-for="item in layerOptions"
@@ -182,25 +200,30 @@
                                         :value="item.value">
                                 </el-option>
                             </el-select>
+                        </el-form-item>
+                    </el-form>
+                </el-card>
+                <!-- next row is visible only if small screen and editGeom toolbar is enabled -->
+                <el-row v-if="showConfig && editGeomEnabled" type="flex" justify="space-between" class="row-bg"
+                        :gutter="1">
+                    <el-col :xs="8" :sm="12" :md="4" :lg="6" :xl="8">
+                        <div class="grid-content bg-purple-light">
 
                         </div>
                     </el-col>
-                </el-row>
-                <!-- next row is visible only if small screen and editGeom toolbar is enabled -->
-                <el-row v-if="showConfig && editGeomEnabled" type="flex" justify="space-between" class="row-bg" :gutter="1">
-                    <el-col :xs="12" :sm="12" :md="4" :lg="6" :xl="8">
+                    <el-col :xs="8" :sm="12" :md="4" :lg="6" :xl="8">
                         <div class="grid-content bg-purple-light">
-                            <cg-vue-auto-complete
-                                    placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                    :size="sizeOfControl"
-                                    :ajax-data-source="geoAdrUrl"
-                                    v-model="addressFound"
-                                    @input="gotoSelectedAdr"
-                                    @errorajax="aNetworkProblemHappened"
+                            <cg-vue-auto-complete ref="mysearch"
+                                                  placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                                                  :size="sizeOfControl"
+                                                  :initial-ajax-data-source="geoAdrUrl"
+                                                  v-model="addressFound"
+                                                  @input="gotoSelectedAdr"
+                                                  @errorajax="aNetworkProblemHappened"
                             ></cg-vue-auto-complete>
                         </div>
                     </el-col>
-                    <el-col :xs="12" :sm="12" :md="3" :lg="3" :xl="2">
+                    <el-col :xs="8" :sm="12" :md="3" :lg="3" :xl="2">
                         <div class="grid-content bg-blue" style="margin-right: auto; margin-left: auto">
                             <el-select :size="sizeOfControl"
                                        v-on:change="changeLayer" v-model="activeLayer"
@@ -240,11 +263,8 @@
   import OlFormatWKT from 'ol/format/wkt'
   import {isNullOrUndefined, dumpObject2String} from 'cgil-html-utils'
   import Log from 'cgil-log'
-  import cgVueAutoComplete from './cgil-vue-autocomplete.vue'
-  // import cgVueAutoComplete from 'cgil-vue-autocomplete'
-  // import   'cgil-vue-autocomplete/dist/cgil-vue-autocomplete.css'
-
-
+  // not using cgil-vue-autocomplete npm to handle element-ui integration
+  import cgVueAutoComplete from './cgil-vue-autocomplete-element-ui'
   import {
     getOlView,
     getOlMap,
@@ -262,10 +282,13 @@
     getNumVerticesPolygonFeature
   } from './OpenLayersSwiss21781'
 
+  import listCities from './communesBBLidar2012'
+
   //this.$Vue.components(Container.name, Container)
 
   const positionGareLausanne = [537892.8, 152095.7]
-  const SMALL_SCREEN_WIDTH = 638
+  const SMALL_SCREEN_WIDTH = 638 // smaller then the xs at <768 but at purpose !
+  const MEDIUM_SCREEN_WIDTH = 992
   const log = new Log('cgilVueOlMap', 4)
 
   export default {
@@ -290,6 +313,8 @@
         ol_Active_Interactions: [],
         activeLayer: 'fonds_geo_osm_bdcad_couleur',
         addressFound: null,  // selected address to search
+        currentOfsFilter: 0,
+        arrListCities: [],
         geoAdrUrl: BASE_REST_API_URL + 'adresses/search_position?query=', // backend to find address
         modeOptions: [{
           value: 'NAVIGATE',
@@ -339,6 +364,10 @@
       geomWkt: {
         type: String,
         default: null
+      },
+      ofsFilter: {
+        type: Number,
+        default: 0 // 0 to allow search address on all cities in city area, 5586 use lausanne only,
       }
     },
     watch: {
@@ -357,9 +386,9 @@
           // TODO check for identical features and do not add them twice
           const numFeaturesAdded = addWktPolygonToLayer(this.ol_newFeaturesLayer, this.geomWkt, this.maxFeatureIdCounter)
           if (isNullOrUndefined(numFeaturesAdded)) {
-            console.log(`# ERROR tying to add this invalid Geom : ${this.geomWkt}`, this.geomWkt)
+            log.e(`# ERROR tying to add this invalid Geom : ${this.geomWkt}`, this.geomWkt)
           } else {
-            console.log(`Successfully added this geomWT to layer now layer has ${numFeaturesAdded} features !`)
+            log.l(`Successfully added this geomWT to layer now layer has ${numFeaturesAdded} features !`)
             this.maxFeatureIdCounter += numFeaturesAdded
           }
         }
@@ -373,7 +402,7 @@
         }
         let layers = this.ol_map.getLayers()
         layers.forEach((layer) => {
-          console.log(`## in changeLayer layers.forEach: layer = ${layer.get('title')}`, layer)
+          log.l(`## in changeLayer layers.forEach: layer = ${layer.get('title')}`, layer)
           let layerName = layer.get('source').layer_
           if (layer.get('type') === 'base') {
             if (layerName === selectedLayer) {
@@ -391,7 +420,7 @@
         } else {
           selectedMode = event.target.value
         }
-        if (DEV) console.log(`## in changeMode selectedMode = ${selectedMode}`)
+        if (DEV) log.l(`## in changeMode selectedMode = ${selectedMode}`)
         this.ol_Active_Interactions.forEach((Interaction) => {
           this.ol_map.removeInteraction(Interaction)
         })
@@ -409,8 +438,8 @@
                 const formatWKT = new OlFormatWKT()
                 let featureWKTGeometry = formatWKT.writeFeature(newGeom)
                 if (DEV) {
-                  console.log(`## in changeMode callback for setCreateMode`, newGeom)
-                  console.log(`** newGeom in wkt format : ${featureWKTGeometry}`)
+                  log.l(`## in changeMode callback for setCreateMode`, newGeom)
+                  log.l(`** newGeom in wkt format : ${featureWKTGeometry}`)
                 }
                 let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
                 this.$emit('gomapgeomchanged', wkt)
@@ -419,11 +448,11 @@
           case 'EDIT':
             setModifyMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions,
               (newGeom) => {
-                console.log(`## in changeMode callback for setModifyMode`, newGeom)
-                // console.log(`** newGeom in wkt format : ${featureWKTGeometry}`)
+                log.t(`## in changeMode callback for setModifyMode`, newGeom)
+                // log.l(`** newGeom in wkt format : ${featureWKTGeometry}`)
                 let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
                 this.$emit('gomapgeomchanged', wkt)
-                console.log(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
+                log.l(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
               })
             break
           case 'TRANSLATE':
@@ -431,7 +460,7 @@
             setTranslateMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions)
             break
           default:
-            if (DEV) console.log(`## in changeMode selectedMode = ${selectedMode} NOT IMPLEMENTED`)
+            if (DEV) log.w(`## in changeMode selectedMode = ${selectedMode} NOT IMPLEMENTED`)
         }
       },
       clearNewFeatures: function () {
@@ -468,6 +497,7 @@
             const arrCoords = objSelected.id.split('_')
             const newPos = [arrCoords[0], arrCoords[1]]
             this.ol_view.setCenter(newPos)
+            this.ol_view.setZoom(9)
           }
         }
       },
@@ -476,14 +506,22 @@
       },
       toggleConfig: function () {
         this.showConfig = !this.showConfig
-        this.toolbarHeight = this.showConfig ? '66px' : '34px'
+        this.toolbarHeight = this.showConfig ? '166px' : '34px'
+      },
+      updateOfsFilter: function (val) {
+        log.t(`# updateOfsFilter new citiy filter :${this.currentOfsFilter}`, val)
+        this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
+        this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
       }
     }, // end of methods section
     mounted() {
+      this.currentOfsFilter = this.ofsFilter // on fixe la valeur initiale de la commune
+      this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
+      this.arrListCities = listCities
       this.ol_view = getOlView(this.center, this.zoom)
       if (DEV) {
-        // console.log(`geoJSONUrl : ${geoJSONUrl}`)
-        // console.log(`geomWkt : ${this.geomWkt}`)
+        // log.l(`geoJSONUrl : ${geoJSONUrl}`)
+        // log.l(`geomWkt : ${this.geomWkt}`)
       }
       if (this.$refs.mymap.clientWidth < 626) {
         this.isSmallScreen = true
@@ -502,16 +540,16 @@
       this.ol_map.on('click',
         (evt) => {
           if (DEV) {
-            console.log(`%c ## BEGIN GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`, 'background: #00f; color: #bada55')
-            // console.log(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
+            log.t(`## BEGIN GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
+            // log.l(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
             // let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
-            // console.log(wkt)
+            // log.l(wkt)
           }
           if (this.uiMode === 'NAVIGATE') {
             this.ol_map.forEachFeatureAtPixel(evt.pixel, (feature, layer) => {
-              console.log(`## GoMap click evt feature detected : \n${dumpFeatureToString(feature)}`, feature)
-              if (!isNullOrUndefined(layer)) console.log(`   feature found in layer : `, layer.get('name'))
-              console.log(dumpObject2String(feature.getProperties()))
+              log.l(`## GoMap click evt feature detected : \n${dumpFeatureToString(feature)}`, feature)
+              if (!isNullOrUndefined(layer)) log.l(`   feature found in layer : `, layer.get('name'))
+              log.l(dumpObject2String(feature.getProperties()))
               this.$emit('selfeature', feature)
             })
           } else {
@@ -522,9 +560,9 @@
                   if (numVertices > 3) {
                     let ok = isValidPolygon(this.ol_interaction_draw.currentFeature, evt.coordinate)
                     if (ok) {
-                      console.log(`%c ## GoMap click in CREATE MODE ${dumpFeatureToString(this.ol_interaction_draw.currentFeature)}`, 'background: #04f; color: #fdfefe', this.ol_interaction_draw.currentFeature)
+                      log.t(`## GoMap click in CREATE MODE ${dumpFeatureToString(this.ol_interaction_draw.currentFeature)}`, this.ol_interaction_draw.currentFeature)
                     } else {
-                      console.log(`%c ## WARNING SELF-INTERSECT GoMap click in CREATE MODE ${dumpFeatureToString(this.ol_interaction_draw.currentFeature)}`, 'background: #f40; color: #fff', this.ol_interaction_draw.currentFeature)
+                      log.w(`## WARNING SELF-INTERSECT GoMap click in CREATE MODE ${dumpFeatureToString(this.ol_interaction_draw.currentFeature)}`, this.ol_interaction_draw.currentFeature)
                       this.ol_interaction_draw.removeLastPoint()
                     }
                   }
@@ -533,17 +571,21 @@
             }
             this.$emit('gomapclick', evt.coordinate)
           }
-          console.log(`%c ## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`, 'background: #00f; color: #bada55')
+          log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
         })
       window.onresize = () => {
-        // this.$refs.mymap.clientHeight = window.innerHeight - 60
-        // console.log(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
+        // log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
         if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
           this.isSmallScreen = true
           this.sizeOfControl = 'mini'
         } else {
           this.isSmallScreen = false
           this.sizeOfControl = 'small'
+        }
+        if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
+          if (this.showConfig == true) {
+            // this.toggleConfig()
+          }
         }
         this.ol_map.updateSize()
       }
