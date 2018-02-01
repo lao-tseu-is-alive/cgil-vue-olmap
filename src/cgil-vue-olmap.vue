@@ -123,33 +123,35 @@
                             </el-button>
                             <span class="gostatus" v-show="(getNumPolygons > 0) && !isSmallScreen">{{getNumPolygons}} Polygones</span>
                         </div>
-                        <div class="grid-content bg-edit-toolbar" v-if="!editGeomEnabled">
-                            <cg-vue-auto-complete
-                                    placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                    :size="sizeOfControl"
-                                    :ajax-data-source="geoAdrUrl"
-                                    v-model="addressFound"
-                                    @input="gotoSelectedAdr"
-                                    @errorajax="aNetworkProblemHappened"
+                        <div class="grid-content" v-if="!editGeomEnabled">
+                            <!-- TODO trouver une solution qui evite les 2 cg-vue-auto-complete tout en etant responsive -->
+                            <cg-vue-auto-complete ref="mysearch"
+                                                  placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                                                  :size="sizeOfControl"
+                                                  :initial-ajax-data-source="geoAdrUrl"
+                                                  v-model="addressFound"
+                                                  @input="gotoSelectedAdr"
+                                                  @errorajax="aNetworkProblemHappened"
                             ></cg-vue-auto-complete>
                         </div>
                     </el-col>
                     <el-col :xs="0" :sm="3" :md="4" :lg="6" :xl="8">
                         <div class="grid-content bg-purple-light" v-if="editGeomEnabled">
-                            <cg-vue-auto-complete
-                                    placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                    :size="sizeOfControl"
-                                    :ajax-data-source="geoAdrUrl"
-                                    v-model="addressFound"
-                                    @input="gotoSelectedAdr"
-                                    @errorajax="aNetworkProblemHappened"
+                            <cg-vue-auto-complete ref="mysearch"
+                                                  placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                                                  :size="sizeOfControl"
+                                                  :initial-ajax-data-source="geoAdrUrl"
+                                                  v-model="addressFound"
+                                                  @input="gotoSelectedAdr"
+                                                  @errorajax="aNetworkProblemHappened"
                             ></cg-vue-auto-complete>
                         </div>
                     </el-col>
+                    <!-- CONFIG layerSelector-->
                     <el-col :xs="0" :sm="5" :md="3" :lg="3" :xl="3">
                         <div class="grid-content bg-blue hidden-sm-and-down"
                              v-show="!isSmallScreen">
-                            <el-select id="layerSelector" :size="sizeOfControl"
+                            <el-select :size="sizeOfControl"
                                        v-on:change="changeLayer" v-model="activeLayer"
                                        title="Cliquez pour sélectionner le fond de plan">
                                 <el-option
@@ -162,7 +164,7 @@
 
                         </div>
                     </el-col>
-                    <!--<el-col :xs="6" :sm="2" :md="0" :lg="0" :xl="0">-->
+                    <!-- CONFIG -->
                     <el-col :xs="1" :sm="1" :md="1" :lg="1" :xl="1">
                         <div class="grid-content" style="margin-right: auto; margin-left: auto">
                             <el-button :size="sizeOfControl" type="primary"
@@ -203,43 +205,6 @@
                         </el-form-item>
                     </el-form>
                 </el-card>
-                <!-- next row is visible only if small screen and editGeom toolbar is enabled -->
-                <el-row v-if="showConfig && editGeomEnabled" type="flex" justify="space-between" class="row-bg"
-                        :gutter="1">
-                    <el-col :xs="8" :sm="12" :md="4" :lg="6" :xl="8">
-                        <div class="grid-content bg-purple-light">
-
-                        </div>
-                    </el-col>
-                    <el-col :xs="8" :sm="12" :md="4" :lg="6" :xl="8">
-                        <div class="grid-content bg-purple-light">
-                            <cg-vue-auto-complete ref="mysearch"
-                                                  placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                                  :size="sizeOfControl"
-                                                  :initial-ajax-data-source="geoAdrUrl"
-                                                  v-model="addressFound"
-                                                  @input="gotoSelectedAdr"
-                                                  @errorajax="aNetworkProblemHappened"
-                            ></cg-vue-auto-complete>
-                        </div>
-                    </el-col>
-                    <el-col :xs="8" :sm="12" :md="3" :lg="3" :xl="2">
-                        <div class="grid-content bg-blue" style="margin-right: auto; margin-left: auto">
-                            <el-select :size="sizeOfControl"
-                                       v-on:change="changeLayer" v-model="activeLayer"
-                                       style=" float:right; right: 1px;"
-                                       title="Cliquez pour sélectionner le fond de plan">
-                                <el-option
-                                        v-for="item in layerOptions"
-                                        :key="item.value"
-                                        :label="item.label"
-                                        :value="item.value">
-                                </el-option>
-                            </el-select>
-
-                        </div>
-                    </el-col>
-                </el-row>
             </el-header>
             <el-main style="padding: 0">
                 <div ref="mymap" class="map-content"></div>
@@ -315,7 +280,7 @@
         addressFound: null,  // selected address to search
         currentOfsFilter: 0,
         arrListCities: [],
-        geoAdrUrl: BASE_REST_API_URL + 'adresses/search_position?query=', // backend to find address
+        geoAdrUrl: `${BASE_REST_API_URL}adresses/search_position?ofs=${this.ofsFilter}&query=`, // backend to find address
         modeOptions: [{
           value: 'NAVIGATE',
           label: 'Navigation'
@@ -428,6 +393,7 @@
           case 'NAVIGATE':
             break
           case 'CREATE':
+            // TODO TEST VALIDITY OF NEW GEOMETRY IN CREATE MODE, not only when editing
             this.ol_interaction_draw = setCreateMode(
               this.ol_map,
               this.ol_newFeatures,
@@ -515,8 +481,11 @@
       }
     }, // end of methods section
     mounted() {
+      log.t(`## in mounted `)
       this.currentOfsFilter = this.ofsFilter // on fixe la valeur initiale de la commune
       this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
+      // this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
+      log.t(`## in mounted ${this.geoAdrUrl}`)
       this.arrListCities = listCities
       this.ol_view = getOlView(this.center, this.zoom)
       if (DEV) {

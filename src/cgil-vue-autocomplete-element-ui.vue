@@ -30,8 +30,7 @@
   import axios from 'axios'
   import {isNullOrUndefined, debounce} from 'cgil-html-utils/src/cgHtmlUtils'
   import Log from 'cgil-log'
-  // TODO ajouter case a cocher toute communes oui/non par defaut lausanne si on est sur RECOLTE
-  const log = new Log('cgilVueAutoComplete', 2) // for now limit to warning and error
+  const log = new Log('cgilVueAutoComplete', 5) // for now limit to warning and error
   const debounceDelay = 350 // in ms
   const minChars = 2
   // const cache = {}
@@ -130,6 +129,7 @@
       }
     }, // end of created section
     mounted: function () {
+      this.ajaxDataSource = this.initialAjaxDataSource
       log.t(`### mounted src: ${this.ajaxDataSource} , with filter? ${this.isAjaxDataSourceWithFilter}`)
     }, // end of created section
     methods: {
@@ -163,7 +163,9 @@
       },
       getData: debounce(function (query = '', cb = null) {
         var that = this
+        log.t(`## in getData ${this.ajaxDataSource}`)
         log.l(`## In getData debounce CALLBACK : "${query}"`, query, cb)
+
         if (that.arrAxiosSource.length > 0) {
           that.arrAxiosSource.map(function (s) {
             s.cancel()

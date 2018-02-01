@@ -427,7 +427,7 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
   olMap.addInteraction(draw)
   arrInteractionsStore.push(draw)
   return draw
-}
+} // end of setCreateMode
 
 export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endModifyCallback) {
   // let multiPolygon = new OlMultiPolygon([])

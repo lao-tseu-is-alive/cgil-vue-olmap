@@ -1,5 +1,5 @@
 import Vue from "vue";
-import demoCgilOlMap from './demoApp'
+import demoCgilOlMap from './demoAppCgilVueOlmap'
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/display.css';
 // import './element-variables.scss'
