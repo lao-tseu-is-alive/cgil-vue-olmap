@@ -14,7 +14,7 @@
 import CgLog from 'cgil-log'
 
 export const PRECISION = 10
-export const EPSILON = Number(`1e-${PRECISION}`)  // 1e-10 or 0.0000000001
+export const EPSILON = Number(`1e-${PRECISION}`) // 1e-10 or 0.0000000001
 let Log = new CgLog('cgil-2d-geom-utils')
 
 /**
@@ -38,9 +38,9 @@ export function pointsIsEqual (p0, p1) {
  */
 export function distance2Point (p0, p1) {
   return (Math.sqrt(
-      ((p0[0] - p1[0]) * (p0[0] - p1[0])) +
+    ((p0[0] - p1[0]) * (p0[0] - p1[0])) +
       ((p0[1] - p1[1]) * (p0[1] - p1[1]))
-    )
+  )
   )
 }
 

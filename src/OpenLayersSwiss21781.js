@@ -409,7 +409,7 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
     }
     let currentPolygon = currentFeature.getGeometry()
     let exteriorRingCoords = currentPolygon.getLinearRing(0).getCoordinates()
-    .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     currentPolygon.setCoordinates([exteriorRingCoords], 'XY')
     multiPolygon.appendPolygon(currentPolygon)
     let multiPolygonFeature = new OlFeature({
@@ -486,7 +486,7 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
     })
   })
   let modify = new OlInteractionModify({
-    features: selectSource  // use our custom collection instead of select.getFeatures()
+    features: selectSource // use our custom collection instead of select.getFeatures()
   })
   let originalCoordinates = {}
   modify.on('modifystart', function (evt) {
@@ -576,7 +576,7 @@ export function getWktGeomFromFeature (olFeature) {
   let geometryType = geom.getType().toUpperCase()
   if (geometryType === 'POLYGON') {
     let exteriorRingCoords = geom.getLinearRing(0).getCoordinates()
-    .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     geom.setCoordinates([exteriorRingCoords], 'XY')
   }
   return formatWKT.writeFeature(olFeature)
@@ -629,7 +629,7 @@ export function getMultiPolygonWktGeometryFromPolygonFeaturesInLayer (olLayer, i
         let geometryType = geom.getType().toUpperCase()
         if (geometryType === 'POLYGON') {
           let exteriorRingCoords = geom.getLinearRing(0).getCoordinates()
-          .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+            .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
           geom.setCoordinates([exteriorRingCoords], 'XY')
           tmpMultiPolygon.appendPolygon(geom)
         }
@@ -722,7 +722,7 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     // TODO try to do it without clickPoint
     let coordsPolygon = []
     let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
-    .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     console.log('## isValidPolygon : Polygon exteriorRingCoords', exteriorRingCoords)
     if (!isNullOrUndefined(clickPoint)) {
       let newCoord = clickPoint.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION)))
@@ -776,7 +776,7 @@ export function getArrVerticesPolygonFeature (olFeature, removeDuplicates = true
   if (geometryType === 'POLYGON') {
     let coordsPolygon = []
     let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
-    .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     for (let i = 0; i < exteriorRingCoords.length; i++) {
       let p = exteriorRingCoords[i]
       // let's store only distinct points to take into account fake points in create mode

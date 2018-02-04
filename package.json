@@ -1,11 +1,11 @@
 {
   "name": "cgil-vue-olmap",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A Vue.js OpenLayers Map Component to be used in Goeland",
   "main": "dist/cgil-vue-olmap.js",
   "scripts": {
-    "start": "poi src/index.js --no-clear --config poi.devconfig.js",
-    "build": "poi build --config poi.config.js",
+    "poistart": "poi src/index.js --no-clear --config poi.devconfig.js",
+    "libbuild": "poi build --config poi.config.js",
     "test": "jest"
   },
   "repository": {
