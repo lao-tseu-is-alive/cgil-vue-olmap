@@ -230,6 +230,7 @@ import Log from 'cgil-log'
 import cgVueAutoComplete from './cgil-vue-autocomplete-element-ui'
 import {
   addGeoJSONPolygonLayer,
+  addGeoJsonPolygonToLayer,
   addWktPolygonToLayer,
   dumpFeatureToString,
   getMultiPolygonWktGeometryFromPolygonFeaturesInLayer,
@@ -328,6 +329,10 @@ export default {
       type: String,
       default: null
     },
+    geomGeoJSON: {
+      type: Object,
+      default: null
+    },
     ofsFilter: {
       type: Number,
       default: 0 // 0 to allow search address on all cities in city area, 5586 use lausanne only,
@@ -335,6 +340,9 @@ export default {
   },
   watch: {
     geomWkt: function () {
+      this._updateGeometry()
+    },
+    geomGeoJSON: function () {
       this._updateGeometry()
     }
   },
@@ -345,13 +353,26 @@ export default {
   },
   methods: {
     _updateGeometry: function () {
+        // TODO recenter the view to the geometry layer
       if (!isNullOrUndefined(this.geomWkt)) {
+        log.t(`# in _updateGeometry for geomWkt`, this.geomWkt)
         // TODO check for identical features and do not add them twice
         const numFeaturesAdded = addWktPolygonToLayer(this.ol_newFeaturesLayer, this.geomWkt, this.maxFeatureIdCounter)
         if (isNullOrUndefined(numFeaturesAdded)) {
-          log.e(`# ERROR tying to add this invalid Geom : ${this.geomWkt}`, this.geomWkt)
+          log.e(`# ERROR tying to add this invalid Geom from geomWkt : ${this.geomWkt}`, this.geomWkt)
         } else {
-          log.l(`Successfully added this geomWT to layer now layer has ${numFeaturesAdded} features !`)
+          log.l(`Successfully added this geomWkt to layer now layer has ${numFeaturesAdded} features !`)
+          this.maxFeatureIdCounter += numFeaturesAdded
+        }
+      }
+      if (!isNullOrUndefined(this.geomGeoJSON)) {
+        // TODO check for identical features and do not add them twice
+        log.t(`# in _updateGeometry for geomGeoJSON`, this.geomGeoJSON)
+        const numFeaturesAdded = addGeoJsonPolygonToLayer(this.ol_newFeaturesLayer, this.geomGeoJSON, this.maxFeatureIdCounter)
+        if (isNullOrUndefined(numFeaturesAdded)) {
+          log.e(`# ERROR tying to add this invalid Geom from geomGeoJSON: ${this.geomGeoJSON}`, this.geomGeoJSON)
+        } else {
+          log.l(`Successfully added this geomGeoJSON to layer now layer has ${numFeaturesAdded} features !`)
           this.maxFeatureIdCounter += numFeaturesAdded
         }
       }
@@ -476,6 +497,22 @@ export default {
       log.t(`# updateOfsFilter new citiy filter :${this.currentOfsFilter}`, val)
       this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
       this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
+    },
+    updateScreen: function () {
+        log.t(`# updateScreen screen clientWidth ${this.$refs.mymap.clientWidth}`)
+        if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
+            this.isSmallScreen = true
+            this.sizeOfControl = 'mini'
+        } else {
+            this.isSmallScreen = false
+            this.sizeOfControl = 'small'
+        }
+        if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
+            if (this.showConfig === true) {
+                // this.toggleConfig()
+            }
+        }
+        this.ol_map.updateSize()
     }
   }, // end of methods section
   mounted () {
@@ -541,7 +578,7 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
       })
     window.onresize = () => {
-      // log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
+      /*// log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
       if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
         this.isSmallScreen = true
         this.sizeOfControl = 'mini'
@@ -554,7 +591,8 @@ export default {
           // this.toggleConfig()
         }
       }
-      this.ol_map.updateSize()
+      this.ol_map.updateSize()*/
+      this.updateScreen()
     }
   }
 }

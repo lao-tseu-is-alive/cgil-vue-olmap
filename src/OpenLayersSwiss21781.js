@@ -669,6 +669,58 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
             geometry: polygon
           })
           if (isValidPolygon(polygonFeature)) {
+            // TODO call isPolygonsFeaturesEqual for all existing other polygon
+            id += 1 // increment counter
+            polygonFeature.setId(id + baseCounter)
+            source.addFeature(polygonFeature)
+          } else {
+            console.log('## Error MULTIPOLYGON IS NOT VALID')
+            return null
+          }
+        })
+        break
+      case 'POLYGON':
+        if (isValidPolygon(feature)) {
+          // let's use this one as it is
+          id += 1 // increment counter
+          feature.setId(id + baseCounter)
+          source.addFeature(feature)
+        } else {
+          console.log('## Error POLYGON IS NOT VALID')
+          return null
+        }
+        break
+      default:
+        console.log('## Error only MULTIPOLYGON and POLYGON are supported here')
+        return null
+    }
+    return id
+  }
+}
+
+export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter) {
+  console.log('## IN addGeoJsonPolygonToLayer ', GeoJSONGeometry)
+  if (isNullOrUndefined(olLayer)) {
+    return null
+  } else {
+    let id = 0
+    let source = olLayer.getSource()
+    const formatGeoJSON = new OlGeoJSON()
+    let feature = formatGeoJSON.readFeature(GeoJSONGeometry, {
+      dataProjection: 'EPSG:21781',
+      featureProjection: 'EPSG:21781'
+    })
+    let geometryType = feature.getGeometry().getType().toUpperCase()
+    // TODO if layer contain already features check for identical features and do not add them twice
+    switch (geometryType) {
+      case 'MULTIPOLYGON':
+        // let's add the polygons
+        feature.getGeometry().getPolygons().forEach(function (polygon) {
+          // console.log('## addWktPolygonToLayer found polygon :', polygon)
+          let polygonFeature = new OlFeature({
+            geometry: polygon
+          })
+          if (isValidPolygon(polygonFeature)) {
             id += 1 // increment counter
             polygonFeature.setId(id + baseCounter)
             source.addFeature(polygonFeature)
@@ -767,6 +819,18 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     console.log('## isValidPolygon : only POLYGON features can be tested here')
     return false
   }
+}
+
+export function isPolygonsFeaturesEqual (olFeature1, olFeature2) {
+  let arrFeature1 = getArrVerticesPolygonFeature(olFeature1)
+  let arrFeature2 = getArrVerticesPolygonFeature(olFeature2)
+    for (let i = 0; i < arrFeature1.length; i++){
+        console.log(`## isPolygonsFeaturesEqual ${i}: ${arrFeature1[i]}, ${arrFeature2[i]}`,arrFeature1[i], arrFeature2[i])
+     if (isPointDistanceOkForPolygon(arrFeature1[i], arrFeature2[i])) {
+       return false
+     }
+    }
+    return true
 }
 
 export function getArrVerticesPolygonFeature (olFeature, removeDuplicates = true) {
