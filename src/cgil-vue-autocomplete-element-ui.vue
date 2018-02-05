@@ -27,7 +27,7 @@
 
 <script>
 import axios from 'axios'
-import {isNullOrUndefined, debounce} from 'cgil-html-utils/src/cgHtmlUtils'
+import {isNullOrUndefined, debounce} from 'cgil-html-utils'
 import Log from 'cgil-log'
 const log = new Log('cgilVueAutoComplete', 5) // for now limit to warning and error
 const debounceDelay = 350 // in ms
