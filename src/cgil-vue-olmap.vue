@@ -353,7 +353,6 @@ export default {
   },
   methods: {
     _updateGeometry: function () {
-        // TODO recenter the view to the geometry layer
       if (!isNullOrUndefined(this.geomWkt)) {
         log.t(`# in _updateGeometry for geomWkt`, this.geomWkt)
         // TODO check for identical features and do not add them twice
@@ -376,6 +375,9 @@ export default {
           this.maxFeatureIdCounter += numFeaturesAdded
         }
       }
+      // cgil added 2 lines of code to recenter the view to the actual geometry layer
+      const extent = this.ol_newFeaturesLayer.getSource().getExtent();
+      this.ol_map.getView().fit(extent, this.ol_map.getSize());
     },
     changeLayer: function (event) {
       let selectedLayer = null
