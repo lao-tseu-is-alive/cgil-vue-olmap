@@ -500,19 +500,21 @@ export default {
     },
     updateScreen: function () {
         log.t(`# updateScreen screen clientWidth ${this.$refs.mymap.clientWidth}`)
-        if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
+        if (this.$refs.mymap.clientWidth < 0) {
+          if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
             this.sizeOfControl = 'mini'
-        } else {
+          } else {
             this.isSmallScreen = false
             this.sizeOfControl = 'small'
-        }
-        if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
+          }
+          if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
             if (this.showConfig === true) {
-                // this.toggleConfig()
+              // this.toggleConfig()
             }
+          }
+          this.ol_map.updateSize()
         }
-        this.ol_map.updateSize()
     }
   }, // end of methods section
   mounted () {
@@ -578,6 +580,7 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
       })
     window.onresize = () => {
+      log.l(`## GoMap IN window.onresize screen clientWidth : ${this.$refs.mymap.clientWidth}`)
       /*// log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
       if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
         this.isSmallScreen = true

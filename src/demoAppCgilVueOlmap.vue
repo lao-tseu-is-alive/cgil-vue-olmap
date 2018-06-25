@@ -68,8 +68,8 @@
           fill="currentColor" class="octo-body"></path>
       </svg>
     </a>
-    <div class="my-map">
-      <cgil-ol-map
+    <div class="my-map" v-show="isMapVisible">
+      <cgil-ol-map ref="mymap"
         :edit-geom-enabled="true"
         :center="center"
         :zoom="8"
@@ -91,7 +91,7 @@
       placeholder="saved geometry"
       v-model="savedGeom">
     </el-input>
-
+    <el-button @click="isMapVisible=!isMapVisible">Afficher la carte</el-button>
   </div>
 </template>
 
@@ -107,6 +107,7 @@ export default {
   data () {
     return {
       title: 'Testing cgil-vue-olmap',
+      isMapVisible: false,
       center: pos,
       initialGeom:
           `MULTIPOLYGON(
@@ -114,6 +115,13 @@ export default {
           ((538352.76 152659.83,538351.16 152645.21,538361.57 152644.41,538362.78 152651.02,538372.19 152650.02,538374.19 152657.03,538352.76 152659.83))
                    )`,
       savedGeom: null
+    }
+  },
+  watch: {
+    'isMapVisible' (val) {
+      if (val === true) {
+        this.$refs.mymap.updateScreen()
+      }
     }
   },
   methods: {
