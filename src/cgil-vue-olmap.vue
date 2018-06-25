@@ -1,6 +1,5 @@
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <!--suppress ALL -->
-<style lang="scss">
+<style scoped lang="scss">
 
   @import "./ol.css";
 
@@ -231,6 +230,7 @@ import cgVueAutoComplete from './cgil-vue-autocomplete-element-ui'
 import {
   addGeoJSONPolygonLayer,
   addGeoJsonPolygonToLayer,
+  loadGeoJsonUrlPolygonLayer,
   addWktPolygonToLayer,
   dumpFeatureToString,
   getMultiPolygonWktGeometryFromPolygonFeaturesInLayer,
@@ -270,7 +270,6 @@ export default {
       ol_interaction_draw: null,
       ol_map: null,
       ol_view: null,
-      ol_geoJSONLayer: null,
       maxFeatureIdCounter: 0, // to give an id to polygon features
       ol_newFeatures: null, // ol collection of features used as vector source for CREATE mode
       ol_newFeaturesLayer: null, // Vector Layer for storing new features
@@ -333,6 +332,10 @@ export default {
       type: Object,
       default: null
     },
+    geojsonurl: {
+      type: String,
+      default: '',
+    },
     ofsFilter: {
       type: Number,
       default: 0 // 0 to allow search address on all cities in city area, 5586 use lausanne only,
@@ -375,9 +378,15 @@ export default {
           this.maxFeatureIdCounter += numFeaturesAdded
         }
       }
-      // cgil added 2 lines of code to recenter the view to the actual geometry layer
-      const extent = this.ol_newFeaturesLayer.getSource().getExtent();
-      this.ol_map.getView().fit(extent, this.ol_map.getSize());
+      if (getNumberFeaturesInLayer(this.ol_newFeaturesLayer) > 0) {
+         log.t(`# in _updateGeometry adjusting view to extent of features:`, )
+        // cgil added 2 lines of code to recenter the view to the actual geometry layer
+        const extent = this.ol_newFeaturesLayer.getSource()
+                           .getExtent();
+        log.t(`# in _updateGeometry extent :`, extent)
+        this.ol_map.getView()
+            .fit(extent, this.ol_map.getSize());
+      }
     },
     changeLayer: function (event) {
       let selectedLayer = null
@@ -524,7 +533,7 @@ export default {
     this.currentOfsFilter = this.ofsFilter // on fixe la valeur initiale de la commune
     this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
     // this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
-    log.t(`## in mounted ${this.geoAdrUrl}`)
+    log.t(`## in mounted geoJSONUrl : ${geoJSONUrl}`)
     this.arrListCities = listCities
     this.ol_view = getOlView(this.center, this.zoom)
     if (DEV) {
@@ -539,8 +548,10 @@ export default {
       this.sizeOfControl = 'small'
     }
     this.ol_map = getOlMap(this.$refs.mymap, this.ol_view)
-    this.ol_geoJSONLayer = addGeoJSONPolygonLayer(this.ol_map, geoJSONUrl)
-    // this.ol_map.addLayer(this.ol_geoJSONLayer)
+    if (this.geojsonurl.length > 4) {
+      log.l(`will enter in loadGeoJsonUrlPolygonLayer(geojsonurl:${this.geojsonurl}`);
+      loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl);
+    }
     this.ol_newFeatures = new OlCollection()
     this.ol_newFeaturesLayer = initNewFeaturesLayer(this.ol_map, this.ol_newFeatures)
     this._updateGeometry()
