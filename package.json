@@ -1,6 +1,6 @@
 {
   "name": "cgil-vue-olmap",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "A Vue.js OpenLayers Map Component to be used in Goeland",
   "main": "dist/cgil-vue-olmap.js",
   "scripts": {

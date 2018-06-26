@@ -11,7 +11,7 @@
  but i did not use it because I just need true or false, and don't need any callback
  function on any intersection, nor do i need 2 other dependencies
  */
-import CgLog from 'cgil-log'
+import Log from 'cgil-log'
 import {DEV} from './config'
 
 export const PRECISION = 10
