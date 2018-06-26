@@ -37,7 +37,7 @@ import {distance2Point, pointsIsEqual, EPSILON, polygonSelfIntersect} from './2d
 export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
 export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
 const MODULE_NAME='OpenLayersSwiss21781';
-const log = (DEV) ? new Log(MODULE_NAME, 3) : new Log(MODULE_NAME, 1);
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
 /*
       // https://golux.lausanne.ch/goeland/objet/pointfixe.php?idobjet=111351
@@ -288,16 +288,15 @@ function getPolygonStyle(
     stroke_width: 3,
   },
 ) {
-  if (DEV) {
-    log.t('## Entering getStyle with feature :', feature);
-    log.t(`resolution : ${resolution}`);
-  }
+  log.t('## Entering getStyle with feature :', feature);
+  log.l(`resolution : ${resolution}`);
+  
   let props = null;
   let theStyle = null;
   if (!isNullOrUndefined(feature) && !isNullOrUndefined(feature.getProperties())) {
     props = feature.getProperties();
     const id = isNullOrUndefined(props.id) ? '#INCONNU#' : props.id;
-    if (DEV) log.t(`id : ${id}`);
+    log.l(`id : ${id}`);
     theStyle = new OlStyle({
       fill: new OlFill({
         color: isNullOrUndefined(props.fill_color) ? options.fill_color : props.fill_color,
@@ -361,7 +360,7 @@ export function loadGeoJsonUrlPolygonLayer(olMap, geojsonUrl, loadCompleteCallba
 }
 
 export function addGeoJSONPolygonLayer (olMap, geojsonUrl, loadCompleteCallback) {
-  if (DEV) console.log(`# in addGeoJSONPolygonLayer creating Layer : ${geojsonUrl}`)
+  log.t(`# in addGeoJSONPolygonLayer creating Layer : ${geojsonUrl}`)
   const vectorSource = new OlSourceVector({
     url: geojsonUrl,
     format: new OlGeoJSON({
@@ -399,7 +398,7 @@ export function addGeoJSONPolygonLayer (olMap, geojsonUrl, loadCompleteCallback)
       // retrieve extent of all features to zoom only when loading of the layer via Ajax XHR is complete
       let extent = newLayer.getSource().getExtent()
       if (DEV) {
-        console.log(`# Finished Loading Layer : ${geojsonUrl}`, e)
+        log.l(`# Finished Loading Layer : ${geojsonUrl}`, e)
       }
       olMap.getView().fit(extent, olMap.getSize())
       // and unregister the "change" listener
@@ -485,9 +484,7 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
   })
   var id = baseCounter + 1
   draw.on('change', function (e) {
-    if (DEV) {
-      console.log(`%c IN setCreateMode EVENT.change :`, 'background: #F4D03F; color: #111', e)
-    }
+    log.t(`IN setCreateMode EVENT.change :`, e)
   })
   draw.on('change:active', function (e) {
     if (DEV) {
@@ -504,9 +501,7 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
     let multiPolygon = new OlMultiPolygon([])
     let currentFeature = e.feature // this is the feature fired the event
     currentFeature.setId(id)
-    if (DEV) {
-      console.log(`INSIDE setCreateMode event drawend currentFeature: ${dumpFeatureToString(currentFeature)}`)
-    }
+    log.t(`INSIDE setCreateMode event drawend currentFeature: ${dumpFeatureToString(currentFeature)}`)
     let currentPolygon = currentFeature.getGeometry()
     let exteriorRingCoords = currentPolygon.getLinearRing(0).getCoordinates()
       .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
@@ -595,7 +590,7 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
     })
   })
   modify.on('modifyend', function (e) {
-    console.log(`-->INSIDE setModifyMode event modifyend : `, e)
+    log.t(`-->INSIDE setModifyMode event modifyend : `, e)
     let newPoint = e.mapBrowserEvent.coordinate // point of last click
     let currentFeatures = e.features.getArray()
     const formatWKT = new OlFormatWKT()
@@ -686,10 +681,10 @@ export function getWktGeometryFeaturesInLayer (olLayer) {
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
-    if (DEV) { console.log(`--> getWktGeometryFeaturesInLayer `) }
+    log.t(`--> getWktGeometryFeaturesInLayer `)
     let source = olLayer.getSource()
     let arrFeatures = source.getFeatures()
-    if (DEV) { console.log(`--> found ${arrFeatures.length} Features`) }
+    log.l(`--> found ${arrFeatures.length} Features`)
     let strGeom = ''
     if (arrFeatures.length > 0) {
       for (let i = 0; i < arrFeatures.length; i++) {
@@ -718,10 +713,10 @@ export function getMultiPolygonWktGeometryFromPolygonFeaturesInLayer (olLayer, i
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
-    if (DEV) { console.log(`--> getMultiPolygonWktGeometryFromFeaturesInLayer `) }
+    log.t(`--> getMultiPolygonWktGeometryFromFeaturesInLayer `)
     let source = olLayer.getSource()
     let arrFeatures = source.getFeatures()
-    if (DEV) { console.log(`--> found ${arrFeatures.length} Features`) }
+    log.l(`--> found ${arrFeatures.length} Features`)
     let tmpMultiPolygon = new OlMultiPolygon([])
     if (arrFeatures.length > 0) {
       for (let i = 0; i < arrFeatures.length; i++) {
@@ -774,7 +769,7 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
             polygonFeature.setId(id + baseCounter)
             source.addFeature(polygonFeature)
           } else {
-            console.log('## Error MULTIPOLYGON IS NOT VALID')
+            log.e('## Error MULTIPOLYGON IS NOT VALID')
             return null
           }
         })
@@ -786,12 +781,12 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
           feature.setId(id + baseCounter)
           source.addFeature(feature)
         } else {
-          console.log('## Error POLYGON IS NOT VALID')
+          log.e('## Error POLYGON IS NOT VALID')
           return null
         }
         break
       default:
-        console.log('## Error only MULTIPOLYGON and POLYGON are supported here')
+        log.e('## Error only MULTIPOLYGON and POLYGON are supported here')
         return null
     }
     return id
@@ -799,7 +794,7 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
 }
 
 export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter) {
-  console.log('## IN addGeoJsonPolygonToLayer ', GeoJSONGeometry)
+  log.t('## IN addGeoJsonPolygonToLayer ', GeoJSONGeometry)
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
@@ -825,7 +820,7 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
             polygonFeature.setId(id + baseCounter)
             source.addFeature(polygonFeature)
           } else {
-            console.log('## Error MULTIPOLYGON IS NOT VALID')
+            log.e('## Error MULTIPOLYGON IS NOT VALID')
             return null
           }
         })
@@ -837,12 +832,12 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
           feature.setId(id + baseCounter)
           source.addFeature(feature)
         } else {
-          console.log('## Error POLYGON IS NOT VALID')
+          log.e('## Error POLYGON IS NOT VALID')
           return null
         }
         break
       default:
-        console.log('## Error only MULTIPOLYGON and POLYGON are supported here')
+        log.e('## Error only MULTIPOLYGON and POLYGON are supported here')
         return null
     }
     return id
@@ -875,10 +870,10 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     let coordsPolygon = []
     let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
       .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
-    console.log('## isValidPolygon : Polygon exteriorRingCoords', exteriorRingCoords)
+    log.l('## isValidPolygon : Polygon exteriorRingCoords', exteriorRingCoords)
     if (!isNullOrUndefined(clickPoint)) {
       let newCoord = clickPoint.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION)))
-      console.log('## isValidPolygon : newCoord', newCoord)
+      log.l('## isValidPolygon : newCoord', newCoord)
       for (let i = 0; i < exteriorRingCoords.length; i++) {
         let p = exteriorRingCoords[i]
         // let's store only distinct points to take into account fake points in create mode
@@ -889,12 +884,12 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
             coordsPolygon.push(p[0], p[1])
           }
         }
-        console.log(`Point ${i} [${p[0]},${p[1]}] = [${newCoord[0]},${newCoord[1]}] is ${pointsIsEqual(p, newCoord)}`)
-        console.log(` distance is ${distance2Point(p, newCoord).toFixed(DIGITIZE_PRECISION)}`)
+        log.l(`Point ${i} [${p[0]},${p[1]}] = [${newCoord[0]},${newCoord[1]}] is ${pointsIsEqual(p, newCoord)}`)
+        log.l(` distance is ${distance2Point(p, newCoord).toFixed(DIGITIZE_PRECISION)}`)
         if (isPointDistanceOkForPolygon(p, newCoord)) {
-          console.log('++++ POINT IS OKAY ++++')
+          log.l('++++ POINT IS OKAY ++++')
         } else {
-          console.log('---- POINT NOT OKAY ---')
+          log.w('---- POINT NOT OKAY ---')
           return false
         }
       }
@@ -902,21 +897,21 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     // let's check condition 2
     let intersects = false
     if (coordsPolygon.length > 0) {
-      console.log('## isValidPolygon : Polygon purified Coords', coordsPolygon)
+      log.l('## isValidPolygon : Polygon purified Coords', coordsPolygon)
       intersects = polygonSelfIntersect(coordsPolygon)
     } else {
       intersects = polygonSelfIntersect(exteriorRingCoords.reduce((r, s) => r.push(s[0], s[1]) && r, []))
     }
-    console.log('## isValidPolygon : polygonSelfIntersect(arrCoords) = ', intersects)
+    log.l('## isValidPolygon : polygonSelfIntersect(arrCoords) = ', intersects)
     if (intersects) {
-      console.log('## isValidPolygon : THIS POLYGON IS NOT VALID')
+      log.e('## isValidPolygon : THIS POLYGON IS NOT VALID')
       return false
     }
     // let's check condition 3
 
     return true
   } else {
-    console.log('## isValidPolygon : only POLYGON features can be tested here')
+    log.e('## isValidPolygon : only POLYGON features can be tested here')
     return false
   }
 }
@@ -925,7 +920,7 @@ export function isPolygonsFeaturesEqual (olFeature1, olFeature2) {
   let arrFeature1 = getArrVerticesPolygonFeature(olFeature1)
   let arrFeature2 = getArrVerticesPolygonFeature(olFeature2)
     for (let i = 0; i < arrFeature1.length; i++){
-        console.log(`## isPolygonsFeaturesEqual ${i}: ${arrFeature1[i]}, ${arrFeature2[i]}`,arrFeature1[i], arrFeature2[i])
+        log.l(`## isPolygonsFeaturesEqual ${i}: ${arrFeature1[i]}, ${arrFeature2[i]}`,arrFeature1[i], arrFeature2[i])
      if (isPointDistanceOkForPolygon(arrFeature1[i], arrFeature2[i])) {
        return false
      }
@@ -936,7 +931,7 @@ export function isPolygonsFeaturesEqual (olFeature1, olFeature2) {
 export function getArrVerticesPolygonFeature (olFeature, removeDuplicates = true) {
   let geometry = olFeature.getGeometry()
   let geometryType = geometry.getType().toUpperCase()
-  console.log(`## getNumDistinctVerticesPolygonFeature : geometryType is ${geometryType}`)
+  log.l(`## getNumDistinctVerticesPolygonFeature : geometryType is ${geometryType}`)
   if (geometryType === 'POLYGON') {
     let coordsPolygon = []
     let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
@@ -958,7 +953,7 @@ export function getArrVerticesPolygonFeature (olFeature, removeDuplicates = true
       return exteriorRingCoords
     }
   } else {
-    console.log('## getArrVerticesPolygonFeature : only POLYGON features can be tested here')
+    log.e('## getArrVerticesPolygonFeature : only POLYGON features can be tested here')
     return null
   }
 }

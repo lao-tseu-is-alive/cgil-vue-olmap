@@ -253,7 +253,9 @@ import listCities from './communesBBLidar2012'
 const positionGareLausanne = [537892.8, 152095.7]
 const SMALL_SCREEN_WIDTH = 638 // smaller then the xs at <768 but at purpose !
 const MEDIUM_SCREEN_WIDTH = 992
-const log = new Log('cgilVueOlMap', 4)
+const MODULE_NAME = 'cgilVueOlMap'
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
+
 
 export default {
   name: 'vue2MapOlSwiss21781',
@@ -324,15 +326,15 @@ export default {
       type: Boolean,
       default: false
     },
-    geomWkt: {
+    geomWkt: { // this geometry in WKT format wil be editable
       type: String,
       default: null
     },
-    geomGeoJSON: {
+    geomGeoJSON: { // this geometry in geomJSON format wil be editable
       type: Object,
       default: null
     },
-    geojsonurl: {
+    geojsonurl: { // this one allows to add a layer
       type: String,
       default: '',
     },
@@ -343,6 +345,7 @@ export default {
   },
   watch: {
     geomWkt: function () {
+      // TODO : here is a good place to see if change is really a different geometry from previous
       this._updateGeometry()
     },
     geomGeoJSON: function () {
@@ -383,7 +386,7 @@ export default {
         // cgil added 2 lines of code to recenter the view to the actual geometry layer
         const extent = this.ol_newFeaturesLayer.getSource()
                            .getExtent();
-        log.t(`# in _updateGeometry extent :`, extent)
+        log.l(`# in _updateGeometry extent :`, extent)
         this.ol_map.getView()
             .fit(extent, this.ol_map.getSize());
       }
