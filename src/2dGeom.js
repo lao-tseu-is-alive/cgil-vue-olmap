@@ -12,10 +12,12 @@
  function on any intersection, nor do i need 2 other dependencies
  */
 import CgLog from 'cgil-log'
+import {DEV} from './config'
 
 export const PRECISION = 10
 export const EPSILON = Number(`1e-${PRECISION}`) // 1e-10 or 0.0000000001
-let Log = new CgLog('cgil-2d-geom-utils')
+const MODULE_NAME = 'cgil-2d-geom-utils'
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 2)
 
 /**
  * pointsIsEqual allow to know if two array points are equal (difference lower then EPSILON)
@@ -103,10 +105,10 @@ export function polygonSelfIntersect (arr2DPolygonCoords) {
       // console.log(i,j,Segments[i],Segments[j])
       if (!((i === 0) && (j === (Segments.length - 1)))) { // no need to test connection from first segment with last one
         if (intersects(Segments[i], Segments[j])) {
-          Log.w(`WARNING Segment ${Segments[i].name} intersects with ${Segments[j].name}`)
+          log.w(`WARNING Segment ${Segments[i].name} intersects with ${Segments[j].name}`)
           return true
         } else {
-          Log.l(`OK Segment ${Segments[i].name} does not intersects with ${Segments[j].name}`)
+          log.l(`OK Segment ${Segments[i].name} does not intersects with ${Segments[j].name}`)
         }
       }
     }

@@ -29,7 +29,9 @@
 import axios from 'axios'
 import {isNullOrUndefined, debounce} from 'cgil-html-utils'
 import Log from 'cgil-log'
-const log = new Log('cgilVueAutoComplete', 5) // for now limit to warning and error
+import {DEV} from './config'
+const MODULE_NAME = 'cgilVueAutoComplete'
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
 const debounceDelay = 350 // in ms
 const minChars = 2
 // const cache = {}
