@@ -9,7 +9,7 @@ import OlCircle from 'ol/style/circle'
 import olEventsCondition from 'ol/events/condition'
 import OlFeature from 'ol/feature'
 import OlFill from 'ol/style/fill'
-import OlGeoJSON from 'ol/format/geojson'
+import OlFormatGeoJSON from 'ol/format/geojson'
 import OlFormatWKT from 'ol/format/wkt'
 import OlInteractionDraw from 'ol/interaction/draw'
 import OlInteractionModify from 'ol/interaction/modify'
@@ -271,11 +271,11 @@ function fetchStatus(response) {
 
 function getVectorSourceGeoJson(geoJsonData) {
   return new OlSourceVector({
-    format: new OlGeoJSON({
+    format: new OlFormatGeoJSON({
       defaultDataProjection: 'EPSG:21781',
       projection: 'EPSG:21781',
     }),
-    features: (new OlGeoJSON()).readFeatures(geoJsonData),
+    features: (new OlFormatGeoJSON()).readFeatures(geoJsonData),
   });
 }
 
@@ -363,7 +363,7 @@ export function addGeoJSONPolygonLayer (olMap, geojsonUrl, loadCompleteCallback)
   log.t(`# in addGeoJSONPolygonLayer creating Layer : ${geojsonUrl}`)
   const vectorSource = new OlSourceVector({
     url: geojsonUrl,
-    format: new OlGeoJSON({
+    format: new OlFormatGeoJSON({
       defaultDataProjection: 'EPSG:21781',
       projection: 'EPSG:21781'
     })
@@ -665,6 +665,21 @@ export function getNumberFeaturesInLayer (olLayer) {
   }
 }
 
+export function getGeoJSONGeomFromFeature (olFeature) {
+  const formatGeoJSON = new OlFormatGeoJSON()
+  let geom = olFeature.getGeometry()
+  let geometryType = geom.getType().toUpperCase()
+  if (geometryType === 'POLYGON') {
+    let exteriorRingCoords = geom.getLinearRing(0).getCoordinates()
+      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
+    geom.setCoordinates([exteriorRingCoords], 'XY')
+  } else  {
+    log.w(`WARNING IN ${MODULE_NAME}.getGeoJSONGeomFromFeature() : only POLYGON ARE SUPPORTED FOR NOW`)
+  }
+  return formatGeoJSON.writeFeature(olFeature)
+}
+
+
 export function getWktGeomFromFeature (olFeature) {
   const formatWKT = new OlFormatWKT()
   let geom = olFeature.getGeometry()
@@ -673,6 +688,8 @@ export function getWktGeomFromFeature (olFeature) {
     let exteriorRingCoords = geom.getLinearRing(0).getCoordinates()
       .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     geom.setCoordinates([exteriorRingCoords], 'XY')
+  } else  {
+    log.w(`WARNING IN ${MODULE_NAME}.getWktGeomFromFeature() : only POLYGON ARE SUPPORTED FOR NOW`)
   }
   return formatWKT.writeFeature(olFeature)
 }
@@ -792,7 +809,8 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
     return id
   }
 }
-
+// this function expects only the geometry part of the geojson
+// TODO may be write a function that also can add a complete GeoJSON with attributes
 export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter) {
   log.t('## IN addGeoJsonPolygonToLayer ', GeoJSONGeometry)
   if (isNullOrUndefined(olLayer)) {
@@ -800,7 +818,7 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
   } else {
     let id = 0
     let source = olLayer.getSource()
-    const formatGeoJSON = new OlGeoJSON()
+    const formatGeoJSON = new OlFormatGeoJSON()
     let feature = formatGeoJSON.readFeature(GeoJSONGeometry, {
       dataProjection: 'EPSG:21781',
       featureProjection: 'EPSG:21781'

@@ -8,7 +8,8 @@
 
   .main {
     width: 100%;
-    height: 100%;
+    height: 1000px;
+    background-color: #062c33;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -84,132 +85,131 @@
 </style>
 
 <template>
-  <div class="main">
+  <div ref="mainzone" class="main">
     <slot></slot>
-    <el-container style="height: 100%">
-      <el-header :height="toolbarHeight">
-        <el-row type="flex" justify="space-between" class="row-bg" :gutter="1">
-          <!--xs < 768px >= sm < 992px >= md < 1200px >= lg <1920px >= xl -->
-          <el-col :xs="18" :sm="18" :md="16" :lg="14" :xl="13">
-            <div class="grid-content bg-edit-toolbar" v-if="editGeomEnabled">
-              <el-button-group>
-                <!--
-                <el-button id="cmdClear" type="warning" size="small" round @click="clearNewFeatures">Clear</el-button>
-                -->
+      <el-container style="height: 100%">
+        <el-header :height="toolbarHeight">
+          <el-row type="flex" justify="space-between" class="row-bg" :gutter="1">
+            <!--xs < 768px >= sm < 992px >= md < 1200px >= lg <1920px >= xl -->
+            <el-col :xs="18" :sm="18" :md="16" :lg="14" :xl="13">
+              <div class="grid-content bg-edit-toolbar" v-if="editGeomEnabled">
+                <el-button-group>
+                  <!--
+                  <el-button id="cmdClear" type="warning" size="small" round @click="clearNewFeatures">Clear</el-button>
+                  -->
 
-                <el-select v-if="isSmallScreen" id="modeSelector" :size="sizeOfControl"
-                           v-on:change="changeMode" v-model="uiMode"
-                           title="Cliquez pour sélectionner le mode de travail">
+                  <el-select v-if="isSmallScreen" id="modeSelector" :size="sizeOfControl"
+                             v-on:change="changeMode" v-model="uiMode"
+                             title="Cliquez pour sélectionner le mode de travail">
+                    <el-option
+                      v-for="item in modeOptions"
+                      :key="item.value"
+                      :label="item.label"
+                      :value="item.value">
+                    </el-option>
+                  </el-select>
+                  <el-radio-group v-if="!isSmallScreen" v-model="uiMode" v-on:change="changeMode"
+                                  :size="sizeOfControl"
+                                  title="Cliquez pour sélectionner le mode de travail">
+                    <el-radio-button v-for="item in modeOptions"
+                                     :label="item.value" :key="item.value">{{item.label}}
+                    </el-radio-button>
+                  </el-radio-group>
+
+                </el-button-group>
+                <el-button id="cmdSave" v-show="editGeomEnabled " type="warning" :size="sizeOfControl"
+                           @click="saveNewFeatures">Sauver
+                </el-button>
+                <span class="gostatus" v-show="(getNumPolygons > 0) && !isSmallScreen">{{getNumPolygons}} Polygones</span>
+              </div>
+              <div class="grid-content" v-if="!editGeomEnabled && searchEnabled">
+                <!-- TODO trouver une solution qui evite les 2 cg-vue-auto-complete tout en etant responsive -->
+                <cg-vue-auto-complete ref="mysearch"
+                                      placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                                      :size="sizeOfControl"
+                                      :initial-ajax-data-source="geoAdrUrl"
+                                      v-model="addressFound"
+                                      @input="gotoSelectedAdr"
+                                      @errorajax="aNetworkProblemHappened"
+                ></cg-vue-auto-complete>
+              </div>
+            </el-col>
+            <el-col :xs="0" :sm="3" :md="4" :lg="6" :xl="8">
+              <div class="grid-content bg-purple-light" v-if="editGeomEnabled">
+                <cg-vue-auto-complete ref="mysearch"
+                                      placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
+                                      :size="sizeOfControl"
+                                      :initial-ajax-data-source="geoAdrUrl"
+                                      v-model="addressFound"
+                                      @input="gotoSelectedAdr"
+                                      @errorajax="aNetworkProblemHappened"
+                ></cg-vue-auto-complete>
+              </div>
+            </el-col>
+            <!-- CONFIG layerSelector-->
+            <el-col :xs="0" :sm="5" :md="3" :lg="3" :xl="3">
+              <div class="grid-content bg-blue hidden-sm-and-down"
+                   v-show="!isSmallScreen">
+                <el-select :size="sizeOfControl"
+                           v-on:change="changeLayer" v-model="activeLayer"
+                           title="Cliquez pour sélectionner le fond de plan">
                   <el-option
-                    v-for="item in modeOptions"
+                    v-for="item in layerOptions"
                     :key="item.value"
                     :label="item.label"
                     :value="item.value">
                   </el-option>
                 </el-select>
-                <el-radio-group v-if="!isSmallScreen" v-model="uiMode" v-on:change="changeMode"
-                                :size="sizeOfControl"
-                                title="Cliquez pour sélectionner le mode de travail">
-                  <el-radio-button v-for="item in modeOptions"
-                                   :label="item.value" :key="item.value">{{item.label}}
-                  </el-radio-button>
-                </el-radio-group>
 
-              </el-button-group>
-              <el-button id="cmdSave" v-show="editGeomEnabled " type="warning" :size="sizeOfControl"
-                         @click="saveNewFeatures">Sauver
-              </el-button>
-              <span class="gostatus" v-show="(getNumPolygons > 0) && !isSmallScreen">{{getNumPolygons}} Polygones</span>
-            </div>
-            <div class="grid-content" v-if="!editGeomEnabled">
-              <!-- TODO trouver une solution qui evite les 2 cg-vue-auto-complete tout en etant responsive -->
-              <cg-vue-auto-complete ref="mysearch"
-                                    placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                    :size="sizeOfControl"
-                                    :initial-ajax-data-source="geoAdrUrl"
-                                    v-model="addressFound"
-                                    @input="gotoSelectedAdr"
-                                    @errorajax="aNetworkProblemHappened"
-              ></cg-vue-auto-complete>
-            </div>
-          </el-col>
-          <el-col :xs="0" :sm="3" :md="4" :lg="6" :xl="8">
-            <div class="grid-content bg-purple-light" v-if="editGeomEnabled">
-              <cg-vue-auto-complete ref="mysearch"
-                                    placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
-                                    :size="sizeOfControl"
-                                    :initial-ajax-data-source="geoAdrUrl"
-                                    v-model="addressFound"
-                                    @input="gotoSelectedAdr"
-                                    @errorajax="aNetworkProblemHappened"
-              ></cg-vue-auto-complete>
-            </div>
-          </el-col>
-          <!-- CONFIG layerSelector-->
-          <el-col :xs="0" :sm="5" :md="3" :lg="3" :xl="3">
-            <div class="grid-content bg-blue hidden-sm-and-down"
-                 v-show="!isSmallScreen">
-              <el-select :size="sizeOfControl"
-                         v-on:change="changeLayer" v-model="activeLayer"
-                         title="Cliquez pour sélectionner le fond de plan">
-                <el-option
-                  v-for="item in layerOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value">
-                </el-option>
-              </el-select>
-
-            </div>
-          </el-col>
-          <!-- CONFIG -->
-          <el-col :xs="1" :sm="1" :md="1" :lg="1" :xl="1">
-            <div class="grid-content" style="margin-right: auto; margin-left: auto">
-              <el-button :size="sizeOfControl" type="primary"
-                         @click="toggleConfig()"
-                         style=" float:right; right: 1px;"
-                         icon="el-icon-setting">
-              </el-button>
-            </div>
-          </el-col>
-        </el-row>
-        <el-card class="box-card">
-          <el-form label-position="left">
-            <el-form-item label="Commune pour les adresses:" :size="sizeOfControl">
-              <el-select v-model="currentOfsFilter" placeholder="Select"
-                         :size="sizeOfControl"
-                         style=" float:right; right: 1px;"
-                         @change="updateOfsFilter">
-                <el-option
-                  v-for="item in arrListCities"
-                  :key="item.ofs"
-                  :label="item.label"
-                  :value="item.ofs">
-                </el-option>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="Choix du fond de plan :" :size="sizeOfControl">
-              <el-select :size="sizeOfControl"
-                         v-on:change="changeLayer" v-model="activeLayer"
-                         style=" float:right; right: 1px;"
-                         title="Cliquez pour sélectionner le fond de plan">
-                <el-option
-                  v-for="item in layerOptions"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value">
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </el-header>
-      <el-main style="padding: 0">
-        <div ref="mymap" class="map-content"></div>
-      </el-main>
-    </el-container>
-
-  </div>
+              </div>
+            </el-col>
+            <!-- CONFIG -->
+            <el-col :xs="1" :sm="1" :md="1" :lg="1" :xl="1">
+              <div class="grid-content" style="margin-right: auto; margin-left: auto">
+                <el-button :size="sizeOfControl" type="primary"
+                           @click="toggleConfig()"
+                           style=" float:right; right: 1px;"
+                           icon="el-icon-setting">
+                </el-button>
+              </div>
+            </el-col>
+          </el-row>
+          <el-card class="box-card">
+            <el-form label-position="left">
+              <el-form-item label="Commune pour les adresses:" :size="sizeOfControl">
+                <el-select v-model="currentOfsFilter" placeholder="Select"
+                           :size="sizeOfControl"
+                           style=" float:right; right: 1px;"
+                           @change="updateOfsFilter">
+                  <el-option
+                    v-for="item in arrListCities"
+                    :key="item.ofs"
+                    :label="item.label"
+                    :value="item.ofs">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Choix du fond de plan :" :size="sizeOfControl">
+                <el-select :size="sizeOfControl"
+                           v-on:change="changeLayer" v-model="activeLayer"
+                           style=" float:right; right: 1px;"
+                           title="Cliquez pour sélectionner le fond de plan">
+                  <el-option
+                    v-for="item in layerOptions"
+                    :key="item.value"
+                    :label="item.label"
+                    :value="item.value">
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-form>
+          </el-card>
+        </el-header>
+        <el-main  style="padding: 0">
+          <div ref="mymap" :height="mapHeight" class="map-content"></div>
+        </el-main>
+      </el-container>
+    </div>
 </template>
 
 <script>
@@ -253,6 +253,8 @@ import listCities from './communesBBLidar2012'
 const positionGareLausanne = [537892.8, 152095.7]
 const SMALL_SCREEN_WIDTH = 638 // smaller then the xs at <768 but at purpose !
 const MEDIUM_SCREEN_WIDTH = 992
+const MIN_HEIGHT = 700
+const TOOLBARHEIGHT = 34
 const MODULE_NAME = 'cgilVueOlMap'
 const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
 
@@ -264,7 +266,8 @@ export default {
   data () {
     return {
       msg: 'Basic OpenLayers Map',
-      toolbarHeight: '34px',
+      toolbarHeight: `${TOOLBARHEIGHT}px`,
+      mapHeight: `${MIN_HEIGHT}px`,
       isSmallScreen: false,
       showConfig: false,
       sizeOfControl: 'small',
@@ -323,6 +326,10 @@ export default {
       default: 'fonds_geo_osm_bdcad_couleur'
     },
     editGeomEnabled: {
+      type: Boolean,
+      default: false
+    },
+    searchEnabled: {
       type: Boolean,
       default: false
     },
@@ -513,8 +520,9 @@ export default {
       this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
     },
     updateScreen: function () {
-        log.t(`# updateScreen screen clientWidth ${this.$refs.mymap.clientWidth}`)
-        if (this.$refs.mymap.clientWidth < 0) {
+        log.t(`# updateScreen screen Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+        this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
+        if (this.$refs.mainzone.clientWidth < 0) {
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
             this.sizeOfControl = 'mini'
@@ -522,11 +530,13 @@ export default {
             this.isSmallScreen = false
             this.sizeOfControl = 'small'
           }
-          if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
+          if (this.$refs.main.clientWidth > MEDIUM_SCREEN_WIDTH) {
             if (this.showConfig === true) {
               // this.toggleConfig()
             }
           }
+          this.ol_map.updateSize()
+        } else {
           this.ol_map.updateSize()
         }
     }
@@ -558,6 +568,7 @@ export default {
     this.ol_newFeatures = new OlCollection()
     this.ol_newFeaturesLayer = initNewFeaturesLayer(this.ol_map, this.ol_newFeatures)
     this._updateGeometry()
+    this.updateScreen()
     // ## EVENTS ##
     this.ol_map.on('click',
       (evt) => {
@@ -596,7 +607,7 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
       })
     window.onresize = () => {
-      log.l(`## GoMap IN window.onresize screen clientWidth : ${this.$refs.mymap.clientWidth}`)
+      log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
       /*// log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
       if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
         this.isSmallScreen = true
