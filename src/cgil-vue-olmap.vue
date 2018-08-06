@@ -8,7 +8,8 @@
 
   .main {
     width: 100%;
-    height: 1000px;
+    min-height: 400px;
+    height: 100%;
     background-color: #062c33;
     margin: 0;
     padding: 0;
@@ -521,7 +522,7 @@ export default {
     },
     updateScreen: function () {
         log.t(`# updateScreen screen Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
-        this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
+        // this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
         if (this.$refs.mainzone.clientWidth < 0) {
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
