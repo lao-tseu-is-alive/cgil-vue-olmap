@@ -759,6 +759,17 @@ export function getMultiPolygonWktGeometryFromPolygonFeaturesInLayer (olLayer, i
   }
 }
 
+export function getBBFromWktPolygon (wktGeometry) {
+  let BoundingBox = null
+  const formatWKT = new OlFormatWKT()
+  let feature = formatWKT.readFeature(wktGeometry, {
+      dataProjection: 'EPSG:21781',
+      featureProjection: 'EPSG:21781'
+    })
+    let geometry = feature.getGeometry()
+  return geometry.getExtent()
+}
+
 export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
   if (isNullOrUndefined(olLayer)) {
     return null

@@ -314,9 +314,9 @@ export default {
       return true
     },
     removeEventListener: function () {
-      log.t('## removeEventListener  :')
-      this.eventListener = false
-      document.removeEventListener('click', this.clickOutsideListener, true)
+      //log.t('## removeEventListener  :')
+      //this.eventListener = false
+      // document.removeEventListener('click', this.clickOutsideListener, true)
     },
     clickOutsideListener: function (evt) {
       let test = (evt.target !== this.$refs.suggestion) && (evt.target !== this.$refs.search)

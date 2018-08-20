@@ -207,7 +207,7 @@
           </el-card>
         </el-header>
         <el-main  style="padding: 0">
-          <div ref="mymap" :height="mapHeight" class="map-content"></div>
+          <div ref="mymap" class="map-content"></div>
         </el-main>
       </el-container>
     </div>
@@ -522,7 +522,7 @@ export default {
     },
     updateScreen: function () {
         log.t(`# updateScreen screen Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
-        // this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
+        this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
         if (this.$refs.mainzone.clientWidth < 0) {
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
