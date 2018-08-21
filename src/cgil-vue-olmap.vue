@@ -284,7 +284,7 @@ export default {
       addressFound: null, // selected address to search
       currentOfsFilter: 0,
       arrListCities: [],
-      geoAdrUrl: `${BASE_REST_API_URL}adresses/search_position?ofs=${this.ofsFilter}&query=`, // backend to find address
+      geoAdrUrl: `${BASE_REST_API_URL}adresses/search_position?ofs=${this.ofsFilter}`, // backend to find address
       modeOptions: [{
         value: 'NAVIGATE',
         label: 'Navigation'
@@ -502,7 +502,7 @@ export default {
         // this.arrSelectionsAdresse.push(objSelected)
         if (!isNullOrUndefined(objSelected.id)) {
           const arrCoords = objSelected.id.split('_')
-          const newPos = [arrCoords[0], arrCoords[1]]
+          const newPos = [ Number.parseFloat(arrCoords[0]) , Number.parseFloat(arrCoords[1])]
           this.ol_view.setCenter(newPos)
           this.ol_view.setZoom(9)
         }
@@ -517,7 +517,7 @@ export default {
     },
     updateOfsFilter: function (val) {
       log.t(`# updateOfsFilter new citiy filter :${this.currentOfsFilter}`, val)
-      this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
+      this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}`
       this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
     },
     updateScreen: function () {
@@ -545,7 +545,7 @@ export default {
   mounted () {
     log.t(`## in mounted `)
     this.currentOfsFilter = this.ofsFilter // on fixe la valeur initiale de la commune
-    this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}&query=`
+    this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}`
     // this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
     log.t(`## in mounted geoJSONUrl : ${geoJSONUrl}`)
     this.arrListCities = listCities
