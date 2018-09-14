@@ -1,5 +1,5 @@
 import {DEV} from './config'
-import {functionExist, isNullOrUndefined} from 'cgil-html-utils'
+import {functionExist, isNullOrUndefined} from 'cgil-html-utils/src/cgHtmlUtils'
 import Log from 'cgil-log';
 import OlMap from 'ol/Map'
 import OlView from 'ol/View'
@@ -20,7 +20,6 @@ import OlMousePosition from 'ol/control/MousePosition'
 import OlMultiPolygon from 'ol/geom/MultiPolygon'
 // import OlPolygon from 'ol/geom/polygon'
 import OlMultiPoint from 'ol/geom/MultiPoint'
-// import olControl from 'ol/control/Control'
 import {defaults as defaultControls} from 'ol/control';
 import {createStringXY} from 'ol/coordinate'
 import olObservable from 'ol/Observable'
@@ -43,7 +42,7 @@ const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
 const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
 const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
-
+// https://openlayers.org/en/latest/examples/reprojection.html
 // https://openlayers.org/en/latest/doc/faq.html#how-do-i-change-the-projection-of-my-map-
 //proj4.defs('EPSG:21781','+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=660.077,13.551,369.344,2.484,1.783,2.939,5.66 +units=m +no_defs');
 
@@ -643,6 +642,28 @@ export function setTranslateMode (olMap, olLayer2Translate, arrInteractionsStore
   olMap.addInteraction(translate)
   arrInteractionsStore.push(select)
   arrInteractionsStore.push(translate)
+}
+
+export function setDeleteMode (olMap, olLayer2Delete, arrInteractionsStore) {
+  let select = new OlInteractionSelect({
+    layers: [olLayer2Delete]
+  })
+  let selectSource = new OlCollection()
+  select.on('select', function (evt) {
+    evt.selected.forEach(function (feature) {
+      selectSource.push(feature)
+      log.l(` Feature selected 4 delete ${dumpFeatureToString(feature)}`)
+      olLayer2Delete.getSource().removeFeature(feature)
+    })
+    evt.deselected.forEach(function (feature) {
+      selectSource.remove(feature)
+    })
+  })
+  let translate = new OlInteractionTranslate({
+    features: select.getFeatures()
+  })
+  olMap.addInteraction(select)
+  arrInteractionsStore.push(select)
 }
 
 export function findFeaturebyId (olLayer, idFieldName, id) {

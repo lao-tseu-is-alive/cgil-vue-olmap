@@ -244,7 +244,8 @@ import {
   isValidPolygon,
   setCreateMode,
   setModifyMode,
-  setTranslateMode
+  setTranslateMode,
+  setDeleteMode
 } from './OpenLayersSwiss21781'
 
 import listCities from './communesBBLidar2012'
@@ -368,6 +369,14 @@ export default {
       return getNumberFeaturesInLayer(this.ol_newFeaturesLayer)
     }
   },
+  updated: function () {
+    log.t(`## in updated $nextTick`)
+    this.$nextTick(function () {
+      this.updateScreen();
+      // Code that will run only after the
+      // entire view has been re-rendered
+    })
+  },
   methods: {
     _updateGeometry: function () {
       if (!isNullOrUndefined(this.geomWkt)) {
@@ -469,6 +478,9 @@ export default {
           // TODO simplify precision of coords after a translate
           setTranslateMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions)
           break
+        case 'DELETE':
+          setDeleteMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions)
+          break
         default:
           if (DEV) log.w(`## in changeMode selectedMode = ${selectedMode} NOT IMPLEMENTED`)
       }
@@ -524,9 +536,12 @@ export default {
       this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
     },
     updateScreen: function () {
-        log.t(`# updateScreen screen Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      if (!isNullOrUndefined(this.$refs.mainzone)) {
+        log.t(
+        `# updateScreen screen mainzone Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
         this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
         if (this.$refs.mainzone.clientWidth > 0) {
+          log.l(' # updateScreen screen this.$refs.mymap.clientWidth', this.$refs.mymap.clientWidth )
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
             this.sizeOfControl = 'mini'
@@ -534,15 +549,19 @@ export default {
             this.isSmallScreen = false
             this.sizeOfControl = 'small'
           }
-          if (this.$refs.main.clientWidth > MEDIUM_SCREEN_WIDTH) {
+          if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
             if (this.showConfig === true) {
               // this.toggleConfig()
             }
           }
           this.ol_map.updateSize()
         } else {
-          this.ol_map.updateSize()
+          log.l(`# updateScreen screen mymap Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`, this.$refs.mainzone)
+          // this.ol_map.updateSize()
         }
+      } else {
+        log.t(`# updateScreen screen Width x Height : this.$refs.mainzone is undefined`, this.$refs.mainzone)
+      }
     }
   }, // end of methods section
   mounted () {
@@ -611,22 +630,8 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
       })
     window.onresize = () => {
-      //log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
-      log.l(`## GoMap IN onresize client Width x Height : ${window.clientWidth} x ${window.clientHeight}`)
-      /*// log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
-      if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
-        this.isSmallScreen = true
-        this.sizeOfControl = 'mini'
-      } else {
-        this.isSmallScreen = false
-        this.sizeOfControl = 'small'
-      }
-      if (this.$refs.mymap.clientWidth > MEDIUM_SCREEN_WIDTH) {
-        if (this.showConfig === true) {
-          // this.toggleConfig()
-        }
-      }
-      this.ol_map.updateSize()*/
+      log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      this.ol_map.updateSize()
       this.updateScreen()
     }
   }

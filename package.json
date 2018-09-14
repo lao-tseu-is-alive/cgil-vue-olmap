@@ -30,7 +30,7 @@
     "axios": "^0.18.0",
     "cgil-html-utils": "^1.0.4",
     "cgil-log": "^1.0.4",
-    "element-ui": "^2.4.6",
+    "element-ui": "^2.4.7",
     "jest": "^22.4.4",
     "ol": "^5.2.0",
     "proj4": "^2.5.0",
