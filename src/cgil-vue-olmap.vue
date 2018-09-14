@@ -222,8 +222,8 @@ import {BASE_REST_API_URL, DEV, geoJSONUrl} from './config'
    Vue.use(ElementUI)
   import {Button, ButtonGroup, Container, Header, RadioGroup, Select, Option } from 'element-ui'
   */
-import OlCollection from 'ol/collection'
-import OlFormatWKT from 'ol/format/wkt'
+import OlCollection from 'ol/Collection'
+import OlFormatWKT from 'ol/format/WKT'
 import {dumpObject2String, isNullOrUndefined} from 'cgil-html-utils'
 import Log from 'cgil-log'
 // not using cgil-vue-autocomplete npm to handle element-ui integration
@@ -287,16 +287,19 @@ export default {
       geoAdrUrl: `${BASE_REST_API_URL}adresses/search_position?ofs=${this.ofsFilter}`, // backend to find address
       modeOptions: [{
         value: 'NAVIGATE',
-        label: 'Navigation'
+        label: 'Naviguer'
       }, {
         value: 'CREATE',
-        label: 'Création'
+        label: 'Créer'
       }, {
         value: 'EDIT',
-        label: 'Edition'
+        label: 'Editer'
       }, {
         value: 'TRANSLATE',
         label: 'Déplacer'
+      }, {
+        value: 'DELETE',
+        label: 'Supprimer'
       }],
       layerOptions: [{
         value: 'fonds_geo_osm_bdcad_couleur',
@@ -523,7 +526,7 @@ export default {
     updateScreen: function () {
         log.t(`# updateScreen screen Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
         this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
-        if (this.$refs.mainzone.clientWidth < 0) {
+        if (this.$refs.mainzone.clientWidth > 0) {
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
             this.sizeOfControl = 'mini'
@@ -608,7 +611,8 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
       })
     window.onresize = () => {
-      log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      //log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      log.l(`## GoMap IN onresize client Width x Height : ${window.clientWidth} x ${window.clientHeight}`)
       /*// log.l(`screen clientWidth ${this.$refs.mymap.clientWidth}`)
       if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
         this.isSmallScreen = true

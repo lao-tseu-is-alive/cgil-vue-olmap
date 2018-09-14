@@ -107,7 +107,7 @@ export default {
   data () {
     return {
       title: 'Testing cgil-vue-olmap',
-      isMapVisible: false,
+      isMapVisible: true,
       center: pos,
       initialGeom:
           `MULTIPOLYGON(

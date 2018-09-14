@@ -1,36 +1,37 @@
 import {DEV} from './config'
 import {functionExist, isNullOrUndefined} from 'cgil-html-utils'
 import Log from 'cgil-log';
-import OlMap from 'ol/map'
-import OlView from 'ol/view'
-import OlAttribution from 'ol/attribution'
-import OlCollection from 'ol/collection'
-import OlCircle from 'ol/style/circle'
-import olEventsCondition from 'ol/events/condition'
-import OlFeature from 'ol/feature'
-import OlFill from 'ol/style/fill'
-import OlFormatGeoJSON from 'ol/format/geojson'
-import OlFormatWKT from 'ol/format/wkt'
-import OlInteractionDraw from 'ol/interaction/draw'
-import OlInteractionModify from 'ol/interaction/modify'
-import OlInteractionSelect from 'ol/interaction/select'
-import OlInteractionTranslate from 'ol/interaction/translate'
-import OlLayerVector from 'ol/layer/vector'
-import OlLayerTile from 'ol/layer/tile'
-import OlMousePosition from 'ol/control/mouseposition'
-import OlMultiPolygon from 'ol/geom/multipolygon'
+import OlMap from 'ol/Map'
+import OlView from 'ol/View'
+import OlCollection from 'ol/Collection'
+import OlCircle from 'ol/style/Circle'
+import {singleClick, shiftKeyOnly} from 'ol/events/condition'
+import OlFeature from 'ol/Feature'
+import OlFill from 'ol/style/Fill'
+import OlFormatGeoJSON from 'ol/format/GeoJSON'
+import OlFormatWKT from 'ol/format/WKT'
+import OlInteractionDraw from 'ol/interaction/Draw'
+import OlInteractionModify from 'ol/interaction/Modify'
+import OlInteractionSelect from 'ol/interaction/Select'
+import OlInteractionTranslate from 'ol/interaction/Translate'
+import OlLayerVector from 'ol/layer/Vector'
+import OlLayerTile from 'ol/layer/Tile'
+import OlMousePosition from 'ol/control/MousePosition'
+import OlMultiPolygon from 'ol/geom/MultiPolygon'
 // import OlPolygon from 'ol/geom/polygon'
-import OlMultiPoint from 'ol/geom/multipoint'
-import olControl from 'ol/control'
-import olCoordinate from 'ol/coordinate'
-import olObservable from 'ol/observable'
-import olProj from 'ol/proj'
-import OlProjection from 'ol/proj/projection'
-import OlSourceVector from 'ol/source/vector'
-import OlSourceWMTS from 'ol/source/wmts'
-import OlStroke from 'ol/style/stroke'
-import OlStyle from 'ol/style/style'
-import OlTileGridWMTS from 'ol/tilegrid/wmts'
+import OlMultiPoint from 'ol/geom/MultiPoint'
+// import olControl from 'ol/control/Control'
+import {defaults as defaultControls} from 'ol/control';
+import {createStringXY} from 'ol/coordinate'
+import olObservable from 'ol/Observable'
+import {addProjection, get} from 'ol/proj'
+import {register} from 'ol/proj/proj4'
+import OlProjection from 'ol/proj/Projection'
+import OlSourceVector from 'ol/source/Vector'
+import OlSourceWMTS from 'ol/source/WMTS'
+import OlStroke from 'ol/style/Stroke'
+import OlStyle from 'ol/style/Style'
+import OlTileGridWMTS from 'ol/tilegrid/WMTS'
 import proj4 from 'proj4'
 import {distance2Point, pointsIsEqual, EPSILON, polygonSelfIntersect} from './2dGeom'
 // in EPSG:21781 we don't want to allow points of same polygon in same cm
@@ -38,7 +39,26 @@ export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
 export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
 const MODULE_NAME='OpenLayersSwiss21781';
 const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
+const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
+const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
+const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
+
+// https://openlayers.org/en/latest/doc/faq.html#how-do-i-change-the-projection-of-my-map-
+//proj4.defs('EPSG:21781','+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=660.077,13.551,369.344,2.484,1.783,2.939,5.66 +units=m +no_defs');
+
+register(proj4);
+const olSwissProjection = get('EPSG:21781');
+//olSwissProjection.setExtent([485071.54, 75346.36, 828515.78, 299941.84]);
+olSwissProjection.setExtent(MAX_EXTENT_LIDAR);
+
+
+const swissProjection = new OlProjection({
+  code: get('EPSG:21781'),
+  extent: MAX_EXTENT_LIDAR,
+  units: 'm'
+})
+addProjection(swissProjection)
 /*
       // https://golux.lausanne.ch/goeland/objet/pointfixe.php?idobjet=111351
       const coordPfa180Stfrancois = [538224.21, 152378.17] // PFA3 180 - St-Francois
@@ -64,15 +84,7 @@ export function Conv3857To21781 (x, y) {
   return proj4.transform(projSource, projDest, [x, y])
 }
 
-const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
-const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
-const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
-const swissProjection = new OlProjection({
-  code: 'EPSG:21781',
-  extent: MAX_EXTENT_LIDAR,
-  units: 'm'
-})
-olProj.addProjection(swissProjection)
+
 // const vdlWmts = initWmtsLayers()
 
 const overlayStyle = (function () {
@@ -161,9 +173,7 @@ function wmtsLausanneSource (layer, options) {
   // noinspection ES6ModulesDependencies
   return new OlSourceWMTS(/** @type {olx.source.WMTSOptions} */{
     // crossOrigin: 'anonymous',
-    attributions: [new OlAttribution({
-      html: `&copy;<a "href='http://www.lausanne.ch/cadastre>Cadastre'>SGLEA-C Lausanne</a>`
-    })],
+    attributions: `&copy;<a "href='http://www.lausanne.ch/cadastre>Cadastre'>SGLEA-C Lausanne</a>`,
     url: url,
     tileGrid: tileGrid,
     layer: layer,
@@ -240,7 +250,7 @@ export function getOlView (centerView = [537892.8, 152095.7], zoomView = 12) {
 
 export function getOlMap (divMap, olView) {
   let olMousePosition = new OlMousePosition({
-    coordinateFormat: olCoordinate.createStringXY(1),
+    coordinateFormat: createStringXY(1),
     projection: 'EPSG:2181'
     /*
     className: 'map-mouse-position',
@@ -252,7 +262,7 @@ export function getOlMap (divMap, olView) {
     target: divMap,
     loadTilesWhileAnimating: true,
     // projection: swissProjection,
-    controls: olControl.defaults({
+    controls: defaultControls({
       attributionOptions: ({
         collapsible: false
       })
@@ -354,7 +364,7 @@ export function loadGeoJsonUrlPolygonLayer(olMap, geojsonUrl, loadCompleteCallba
       }
     })
     .catch((error) => {
-      // TODO find a way to send back this error to client
+      // maybe find a better way to send back this error to the client
       log.e(`loadGeoJSONPolygonLayer # FETCH REQUEST FAILED with url: ${geojsonUrl}`, error);
     });
 }
@@ -443,8 +453,8 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
     // that new vertices can be drawn at the same position
     // of existing vertices
     deleteCondition: function (event) {
-      return olEventsCondition.shiftKeyOnly(event) &&
-        olEventsCondition.singleClick(event)
+      return shiftKeyOnly(event) &&
+        singleClick(event)
     }
   })
   olMap.addInteraction(modify)
