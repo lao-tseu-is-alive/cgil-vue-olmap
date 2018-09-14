@@ -659,9 +659,6 @@ export function setDeleteMode (olMap, olLayer2Delete, arrInteractionsStore) {
       selectSource.remove(feature)
     })
   })
-  let translate = new OlInteractionTranslate({
-    features: select.getFeatures()
-  })
   olMap.addInteraction(select)
   arrInteractionsStore.push(select)
 }
