@@ -1,5 +1,5 @@
 import {DEV} from './config'
-import {functionExist, isNullOrUndefined} from 'cgil-html-utils/src/cgHtmlUtils'
+import {functionExist, isNullOrUndefined} from 'cgil-html-utils'
 import Log from 'cgil-log';
 import OlMap from 'ol/Map'
 import OlView from 'ol/View'
@@ -42,6 +42,8 @@ const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
 const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
 const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
+proj4.defs('EPSG:2056', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=2600000 +y_0=1200000 +ellps=bessel +towgs84=674.374,15.056,405.346,0,0,0,0 +units=m +no_defs');
+
 // https://openlayers.org/en/latest/examples/reprojection.html
 // https://openlayers.org/en/latest/doc/faq.html#how-do-i-change-the-projection-of-my-map-
 //proj4.defs('EPSG:21781','+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=660.077,13.551,369.344,2.484,1.783,2.939,5.66 +units=m +no_defs');
@@ -68,6 +70,12 @@ addProjection(swissProjection)
 export function Conv21781To4326 (x, y) {
   const projSource = new proj4.Proj('EPSG:21781')
   const projDest = new proj4.Proj('EPSG:4326')
+  return proj4.transform(projSource, projDest, [x, y])
+}
+// 2056 MN95 new Swiss Projection
+export function Conv21781To2056 (x, y) {
+  const projSource = new proj4.Proj('EPSG:21781')
+  const projDest = new proj4.Proj('EPSG:2056')
   return proj4.transform(projSource, projDest, [x, y])
 }
 
@@ -180,12 +188,13 @@ function wmtsLausanneSource (layer, options) {
   })
 }
 
-function initWmtsLayers () {
+function initWmtsLayers (initialBaseLayer) {
+  log.t(`# in initWmtsLayers(baselayer=${initialBaseLayer}`)
   let arrayWmts = []
   arrayWmts.push(new OlLayerTile({
     title: 'Plan ville couleur',
     type: 'base',
-    visible: true,
+    visible: (initialBaseLayer === 'fonds_geo_osm_bdcad_couleur'),
     source: wmtsLausanneSource('fonds_geo_osm_bdcad_couleur', {
       timestamps: [2015],
       format: 'png'
@@ -194,7 +203,7 @@ function initWmtsLayers () {
   arrayWmts.push(new OlLayerTile({
     title: 'Plan cadastral (gris)',
     type: 'base',
-    visible: false,
+    visible: (initialBaseLayer === 'fonds_geo_osm_bdcad_gris'),
     source: wmtsLausanneSource('fonds_geo_osm_bdcad_gris', {
       timestamps: [2015],
       format: 'png'
@@ -203,7 +212,7 @@ function initWmtsLayers () {
   arrayWmts.push(new OlLayerTile({
     title: 'Orthophoto 2012',
     type: 'base',
-    visible: false,
+    visible: (initialBaseLayer === 'orthophotos_ortho_lidar_2012'),
     source: wmtsLausanneSource('orthophotos_ortho_lidar_2012', {
       timestamps: [2012],
       format: 'png'
@@ -212,7 +221,7 @@ function initWmtsLayers () {
   arrayWmts.push(new OlLayerTile({
     title: 'Orthophoto 2016',
     type: 'base',
-    visible: false,
+    visible: (initialBaseLayer === 'orthophotos_ortho_lidar_2016'),
     source: wmtsLausanneSource('orthophotos_ortho_lidar_2016', {
       timestamps: [2016],
       format: 'png'
@@ -221,7 +230,7 @@ function initWmtsLayers () {
   arrayWmts.push(new OlLayerTile({
     title: 'Carte Nationale',
     type: 'base',
-    visible: false,
+    visible: (initialBaseLayer === 'fonds_geo_carte_nationale_msgroup'),
     source: wmtsLausanneSource('fonds_geo_carte_nationale_msgroup', {
       timestamps: [2014],
       format: 'png'
@@ -247,7 +256,13 @@ export function getOlView (centerView = [537892.8, 152095.7], zoomView = 12) {
   })
 }
 
-export function getOlMap (divMap, olView) {
+export function getOlMap (divMap,
+                          olView,
+                          baseLayer = 'fonds_geo_osm_bdcad_couleur',
+                          geojsonData = null,
+                          clickCallback = null,
+                          ) {
+  log.t(`In getOlMap(${divMap}, .. baseLayer= ${baseLayer}, geojsonData`)
   let olMousePosition = new OlMousePosition({
     coordinateFormat: createStringXY(1),
     projection: 'EPSG:2181'
@@ -257,7 +272,21 @@ export function getOlMap (divMap, olView) {
     undefinedHTML: '&nbsp;'
     */
   })
-  return new OlMap({
+  const arrLayers = initWmtsLayers(baseLayer);
+  let newVectorLayer = null;
+  if (!isNullOrUndefined(geojsonData)) {
+    log.l(`# will load GeoJSON Polygon Layer( geojsondata:${geojsonData.features.lenght}`, geojsonData)
+    const vectorSource = getVectorSourceGeoJson(geojsonData)
+    newVectorLayer = new OlLayerVector({
+      title: 'ol_vector_layer_geojsondata',
+      name: 'ol_vector_layer_geojsondata',
+      source: vectorSource,
+      style: getPolygonStyle,
+    });
+    log.l(`Layer Features : ${getNumberFeaturesInLayer(newVectorLayer)}`, newVectorLayer)
+    arrLayers.push(newVectorLayer)
+  }
+  const myMap = new OlMap({
     target: divMap,
     loadTilesWhileAnimating: true,
     // projection: swissProjection,
@@ -266,9 +295,12 @@ export function getOlMap (divMap, olView) {
         collapsible: false
       })
     }).extend([olMousePosition]),
-    layers: initWmtsLayers(),
+    layers: arrLayers,
     view: olView
-  })
+  });
+  myMap.set('ol_vector_layer_geojsondata', newVectorLayer);
+  return myMap;
+  
 }
 
 function fetchStatus(response) {
@@ -342,7 +374,10 @@ function getPolygonStyle(
 }
 
 
-export function loadGeoJsonUrlPolygonLayer(olMap, geojsonUrl, loadCompleteCallback) {
+export function loadGeoJsonUrlPolygonLayer(olMap,
+                                           geojsonUrl,
+                                           loadCompleteCallback = null,
+                                           layerName = 'ol_vector_layer_geojsonurl') {
   log.t(`# in loadGeoJsonUrlPolygonLayer creating Layer : ${geojsonUrl}`);
   fetch(geojsonUrl)
     .then(fetchStatus)
@@ -351,6 +386,8 @@ export function loadGeoJsonUrlPolygonLayer(olMap, geojsonUrl, loadCompleteCallba
       log.t('# in loadGeoJSONPolygonLayer then((json) => : ', json);
       const vectorSource = getVectorSourceGeoJson(json);
       const newLayer = new OlLayerVector({
+        name: layerName,
+        title: layerName,
         source: vectorSource,
         style: getPolygonStyle,
       });
@@ -606,8 +643,8 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
     currentFeatures.forEach(function (feature) {
       let isItValid = isValidPolygon(feature, newPoint)
       if (DEV) {
-        console.log(`--> in modifyend featureWKTGeometry=\n${dumpFeatureToString(feature)}`)
-        console.log(`--> in modifyend isValidPolygon=${isItValid}`)
+        log.l(`--> in modifyend featureWKTGeometry=\n${dumpFeatureToString(feature)}`)
+        log.l(`--> in modifyend isValidPolygon=${isItValid}`)
       }
       if ((feature in originalCoordinates) && !isItValid) {
         feature.getGeometry().setCoordinates(originalCoordinates[feature])
@@ -618,7 +655,7 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
       }
       let featureWKTGeometry = formatWKT.writeFeature(feature)
       if (DEV) {
-        console.log(`--> in modifyend featureWKTGeometry= ${featureWKTGeometry}`)
+        log.l(`--> in modifyend featureWKTGeometry= ${featureWKTGeometry}`)
       }
     })
     if (functionExist(endModifyCallback)) {
@@ -709,6 +746,7 @@ export function getGeoJSONGeomFromFeature (olFeature) {
 
 
 export function getWktGeomFromFeature (olFeature) {
+  log.t(`in getWktGeometryFeaturesInLayer `)
   const formatWKT = new OlFormatWKT()
   let geom = olFeature.getGeometry()
   let geometryType = geom.getType().toUpperCase()
@@ -726,7 +764,7 @@ export function getWktGeometryFeaturesInLayer (olLayer) {
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
-    log.t(`--> getWktGeometryFeaturesInLayer `)
+    log.t(`in getWktGeometryFeaturesInLayer `)
     let source = olLayer.getSource()
     let arrFeatures = source.getFeatures()
     log.l(`--> found ${arrFeatures.length} Features`)
@@ -746,6 +784,7 @@ export function getWktGeometryFeaturesInLayer (olLayer) {
  * @return {string} : the string representation of this feature
  */
 export function dumpFeatureToString (olFeature) {
+  log.t(`in dumpFeatureToString `)
   let featureWKTGeometry = getWktGeomFromFeature(olFeature)
   let geometryType = olFeature.getGeometry().getType().toUpperCase()
   let rev = olFeature.getRevision()
@@ -919,6 +958,7 @@ export function isPointDistanceOkForPolygon (p0, p1) {
  * @return {boolean} : true if the polygon is valid
  */
 export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates = true) {
+  const debugThis = false;
   let geometry = olFeature.getGeometry()
   let geometryType = geometry.getType().toUpperCase()
   if (geometryType === 'POLYGON') {
@@ -927,10 +967,10 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     let coordsPolygon = []
     let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
       .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
-    log.l('## isValidPolygon : Polygon exteriorRingCoords', exteriorRingCoords)
+    if (debugThis) log.l('## isValidPolygon : Polygon exteriorRingCoords', exteriorRingCoords)
     if (!isNullOrUndefined(clickPoint)) {
       let newCoord = clickPoint.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION)))
-      log.l('## isValidPolygon : newCoord', newCoord)
+      if (debugThis) log.l('## isValidPolygon : newCoord', newCoord)
       for (let i = 0; i < exteriorRingCoords.length; i++) {
         let p = exteriorRingCoords[i]
         // let's store only distinct points to take into account fake points in create mode
@@ -944,9 +984,9 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
         log.l(`Point ${i} [${p[0]},${p[1]}] = [${newCoord[0]},${newCoord[1]}] is ${pointsIsEqual(p, newCoord)}`)
         log.l(` distance is ${distance2Point(p, newCoord).toFixed(DIGITIZE_PRECISION)}`)
         if (isPointDistanceOkForPolygon(p, newCoord)) {
-          log.l('++++ POINT IS OKAY ++++')
+          if (debugThis) log.l('++++ POINT IS OKAY ++++')
         } else {
-          log.w('---- POINT NOT OKAY ---')
+          if (debugThis) log.w('---- POINT NOT OKAY ---', newCoord)
           return false
         }
       }
@@ -954,12 +994,12 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
     // let's check condition 2
     let intersects = false
     if (coordsPolygon.length > 0) {
-      log.l('## isValidPolygon : Polygon purified Coords', coordsPolygon)
+      if (debugThis) log.l('## isValidPolygon : Polygon purified Coords', coordsPolygon)
       intersects = polygonSelfIntersect(coordsPolygon)
     } else {
       intersects = polygonSelfIntersect(exteriorRingCoords.reduce((r, s) => r.push(s[0], s[1]) && r, []))
     }
-    log.l('## isValidPolygon : polygonSelfIntersect(arrCoords) = ', intersects)
+    if (debugThis) log.l('## isValidPolygon : polygonSelfIntersect(arrCoords) = ', intersects)
     if (intersects) {
       log.e('## isValidPolygon : THIS POLYGON IS NOT VALID')
       return false

@@ -70,11 +70,13 @@
     </a>
     <div class="my-map" v-show="isMapVisible">
       <cgil-ol-map ref="mymap"
-        :edit-geom-enabled="true"
-        :center="center"
-        :zoom="8"
-        :geomWkt="initialGeom"
-        @gomapSaveGeomClick="saveGeometry"
+                   :edit-geom-enabled="isEditEnable"
+                   :center="center"
+                   :zoom="8"
+                   :geomWkt="initialGeom"
+                   baselayer="fonds_geo_osm_bdcad_gris"
+                   :geojsondata="geojson"
+                   @gomapSaveGeomClick="saveGeometry"
       ></cgil-ol-map>
     </div>
     <el-input
@@ -91,12 +93,15 @@
       placeholder="saved geometry"
       v-model="savedGeom">
     </el-input>
-    <el-button @click="isMapVisible=!isMapVisible">Afficher la carte</el-button>
+    <el-button @click="isMapVisible=!isMapVisible">{{!isMapVisible ? 'Afficher': 'Cacher'}} la carte</el-button>
+    <el-button @click="isEditEnable=!isEditEnable">{{!isEditEnable ? 'Activer': 'Désactiver'}} l'édition</el-button>
   </div>
 </template>
 
 <script>
 import cgilOlMap from './cgil-vue-olmap'
+import { geodata } from './data'
+import {Conv21781To2056} from './OpenLayersSwiss21781'
 
 const pos = [538350.5, 152669.0] // cathedrale Lausanne
 export default {
@@ -108,7 +113,9 @@ export default {
     return {
       title: 'Testing cgil-vue-olmap',
       isMapVisible: true,
+      isEditEnable: true,
       center: pos,
+      geojson: geodata,
       initialGeom:
           `MULTIPOLYGON(
           ((538319.52 152664.64,538318.72 152659.83,538343.55 152656.63,538344.15 152661.63,538319.52 152664.64)),
@@ -124,10 +131,22 @@ export default {
       }
     }
   },
+  mounted () {
+    console.info('In demoApp cgil-vue-olmap mounted: ')
+    this.testConversionToMn95()
+  },
   methods: {
     saveGeometry: function (val) {
       console.info('In demoApp cgil-vue-olmap event gomapSaveGeomClick received : ', val)
       this.savedGeom = val
+    },
+    testConversionToMn95() {
+      const PFP1_MN03 = [537681.26 , 150797.21]
+      const PFP1_MN95 = [2537680.826 , 1150797.6]
+      const testMN95 = Conv21781To2056(PFP1_MN03[0], PFP1_MN03[1])
+      console.log(`Point in REAL MN95  is ${PFP1_MN95[0]} / ${PFP1_MN95[1]}`)
+      console.log(`Proj4Js conversion  is ${testMN95.x} / ${testMN95.y}`)
+
     }
   }
 }

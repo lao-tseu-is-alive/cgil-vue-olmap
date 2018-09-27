@@ -31,7 +31,7 @@ import {isNullOrUndefined, debounce} from 'cgil-html-utils'
 import Log from 'cgil-log'
 import {DEV} from './config'
 const MODULE_NAME = 'cgilVueAutoComplete'
-const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
+const log = (DEV) ? new Log(MODULE_NAME, 2) : new Log(MODULE_NAME, 1);
 const debounceDelay = 350 // in ms
 const minChars = 2
 // const cache = {}

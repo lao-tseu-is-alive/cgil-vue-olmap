@@ -17,7 +17,7 @@ import {DEV} from './config'
 export const PRECISION = 10
 export const EPSILON = Number(`1e-${PRECISION}`) // 1e-10 or 0.0000000001
 const MODULE_NAME = 'cgil-2d-geom-utils'
-const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 2)
+const log = (DEV) ? new Log(MODULE_NAME, 3) : new Log(MODULE_NAME, 2)
 
 /**
  * pointsIsEqual allow to know if two array points are equal (difference lower then EPSILON)

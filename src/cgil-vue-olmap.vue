@@ -214,6 +214,7 @@
 </template>
 
 <script>
+/* eslint-disable */
 import {BASE_REST_API_URL, DEV, geoJSONUrl} from './config'
 /* TODO : test a way to include only what i need from element-ui
    in the mean time you need to
@@ -326,11 +327,11 @@ export default {
       type: Array,
       default: () => (positionGareLausanne)
     },
-    baseLayer: {
+    baselayer: {
       type: String,
       default: 'fonds_geo_osm_bdcad_couleur'
     },
-    editGeomEnabled: {
+    editGeomEnabled: { // goign from true to false will triger a call to clearNewFeatures to reset mode to navigate and clear current editing
       type: Boolean,
       default: false
     },
@@ -346,14 +347,18 @@ export default {
       type: Object,
       default: null
     },
-    geojsonurl: { // this one allows to add a layer
+    geojsonurl: { // this one allows to add an url to get remote geojson layer , stored in ol_vector_layer_geojsonurl
       type: String,
       default: '',
     },
     ofsFilter: {
       type: Number,
       default: 0 // 0 to allow search address on all cities in city area, 5586 use lausanne only,
-    }
+    },
+    geojsondata: {  //read only layer for geojson vector data display on the map, stored in ol_vector_layer_geojsondata
+      type: Object,
+      default: null,
+    },
   },
   watch: {
     geomWkt: function () {
@@ -362,6 +367,10 @@ export default {
     },
     geomGeoJSON: function () {
       this._updateGeometry()
+    },
+    editGeomEnabled: function (newValue, oldValue) {
+      log.t(`## in editGeomEnabled watch old: ${oldValue}, new: ${newValue}`)
+      if (newValue === false && oldValue === true)  this.clearNewFeatures()
     }
   },
   computed: {
@@ -486,6 +495,7 @@ export default {
       }
     },
     clearNewFeatures: function () {
+      log.t(`## in clearNewFeatures`)
       if (this.ol_newFeatures !== null) {
         this.ol_newFeatures.clear()
         this.ol_Active_Interactions.forEach((Interaction) => {
@@ -537,8 +547,10 @@ export default {
     },
     updateScreen: function () {
       if (!isNullOrUndefined(this.$refs.mainzone)) {
+        /*
         log.t(
         `# updateScreen screen mainzone Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+        */
         this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
         if (this.$refs.mainzone.clientWidth > 0) {
           log.l(' # updateScreen screen this.$refs.mymap.clientWidth', this.$refs.mymap.clientWidth )
@@ -569,13 +581,8 @@ export default {
     this.currentOfsFilter = this.ofsFilter // on fixe la valeur initiale de la commune
     this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}`
     // this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
-    log.t(`## in mounted geoJSONUrl : ${geoJSONUrl}`)
     this.arrListCities = listCities
     this.ol_view = getOlView(this.center, this.zoom)
-    if (DEV) {
-      // log.l(`geoJSONUrl : ${geoJSONUrl}`)
-      // log.l(`geomWkt : ${this.geomWkt}`)
-    }
     if (this.$refs.mymap.clientWidth < 626) {
       this.isSmallScreen = true
       this.sizeOfControl = 'mini'
@@ -583,10 +590,10 @@ export default {
       this.isSmallScreen = false
       this.sizeOfControl = 'small'
     }
-    this.ol_map = getOlMap(this.$refs.mymap, this.ol_view)
+    this.ol_map = getOlMap(this.$refs.mymap, this.ol_view, this.baselayer, this.geojsondata )
     if (this.geojsonurl.length > 4) {
       log.l(`will enter in loadGeoJsonUrlPolygonLayer(geojsonurl:${this.geojsonurl}`);
-      loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl);
+      loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl, null, 'ol_vector_layer_geojsonurl');
     }
     this.ol_newFeatures = new OlCollection()
     this.ol_newFeaturesLayer = initNewFeaturesLayer(this.ol_map, this.ol_newFeatures)
@@ -595,19 +602,44 @@ export default {
     // ## EVENTS ##
     this.ol_map.on('click',
       (evt) => {
+      const x = Number(evt.coordinate[0]).toFixed(2);
+      const y = Number(evt.coordinate[1]).toFixed(2);
         if (DEV) {
-          log.t(`## BEGIN GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
+          log.t(`## BEGIN GoMap click callback : ${x},${y}`)
           // log.l(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
           // let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
           // log.l(wkt)
         }
         if (this.uiMode === 'NAVIGATE') {
-          this.ol_map.forEachFeatureAtPixel(evt.pixel, (feature, layer) => {
-            log.l(`## GoMap click evt feature detected : \n${dumpFeatureToString(feature)}`, feature)
-            if (!isNullOrUndefined(layer)) log.l(`   feature found in layer : `, layer.get('name'))
-            log.l(dumpObject2String(feature.getProperties()))
-            this.$emit('selfeature', feature)
-          })
+          const feature = this.ol_map.forEachFeatureAtPixel(
+            evt.pixel,
+            (feature, layer) => {
+              if (!isNullOrUndefined(layer)) log.l(`feature found in layer : "${layer.get('name')}", layer:`, layer)
+              log.l(`# GoMap click in NAVIGATE mode, evt feature detected :
+                ${dumpFeatureToString(feature)}`, feature)
+
+              log.l(dumpObject2String(feature.getProperties()))
+              this.$emit('selfeature', feature)
+              return feature
+            });
+          if (!isNullOrUndefined(feature)) {
+            log.l('Feature found :', feature);
+            const val = feature.values_;
+            if (!isNullOrUndefined(val)) {
+              const info = {coordinates: [x, y], id: val.id};
+              log.l(`Feature id : ${val.id}, info:`, info);
+              this.$emit('mapclick', info);
+              // case of an iframe containing a function getMapClickCoordsXY
+              // removed for now beacaused it get called also when no iln -sframe
+              // if (typeof (window.parent.getMapClickCoordsXY) !== 'undefined') {
+              //  window.parent.getMapClickCoordsXY(info);
+              // }
+              // case of a function getMapClickCoordsXY in global context in window
+              if (typeof (window.getMapClickCoordsXY) !== 'undefined') {
+                window.getMapClickCoordsXY(info);
+              }
+            }
+          }
         } else {
           if (this.uiMode === 'CREATE') {
             if (!isNullOrUndefined(this.ol_interaction_draw)) {
@@ -627,10 +659,10 @@ export default {
           }
           this.$emit('gomapclick', evt.coordinate)
         }
-        log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}}`)
+        log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}`)
       })
     window.onresize = () => {
-      log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      // log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
       this.ol_map.updateSize()
       this.updateScreen()
     }
