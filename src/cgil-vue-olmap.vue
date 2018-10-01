@@ -92,7 +92,7 @@
         <el-header :height="toolbarHeight">
           <el-row type="flex" justify="space-between" class="row-bg" :gutter="1">
             <!--xs < 768px >= sm < 992px >= md < 1200px >= lg <1920px >= xl -->
-            <el-col :xs="18" :sm="18" :md="16" :lg="14" :xl="13">
+            <el-col :xs="18" :sm="17" :md="14" :lg="14" :xl="13">
               <div class="grid-content bg-edit-toolbar" v-if="editGeomEnabled">
                 <el-button-group>
                   <!--
@@ -135,7 +135,7 @@
                 ></cg-vue-auto-complete>
               </div>
             </el-col>
-            <el-col :xs="0" :sm="3" :md="4" :lg="6" :xl="8">
+            <el-col :xs="0" :sm="4" :md="6" :lg="6" :xl="8">
               <div class="grid-content bg-purple-light" v-if="editGeomEnabled">
                 <cg-vue-auto-complete ref="mysearch"
                                       placeholder="Recherchez la position d'une adresse en entrant quelques caractères de celle-ci..."
@@ -147,23 +147,7 @@
                 ></cg-vue-auto-complete>
               </div>
             </el-col>
-            <!-- CONFIG layerSelector-->
-            <el-col :xs="0" :sm="5" :md="3" :lg="3" :xl="3">
-              <div class="grid-content bg-blue hidden-sm-and-down"
-                   v-show="!isSmallScreen">
-                <el-select :size="sizeOfControl"
-                           v-on:change="changeLayer" v-model="activeLayer"
-                           title="Cliquez pour sélectionner le fond de plan">
-                  <el-option
-                    v-for="item in layerOptions"
-                    :key="item.value"
-                    :label="item.label"
-                    :value="item.value">
-                  </el-option>
-                </el-select>
 
-              </div>
-            </el-col>
             <!-- CONFIG -->
             <el-col :xs="1" :sm="1" :md="1" :lg="1" :xl="1">
               <div class="grid-content" style="margin-right: auto; margin-left: auto">
@@ -175,9 +159,10 @@
               </div>
             </el-col>
           </el-row>
+          <template v-if="showConfig">
           <el-card class="box-card">
-            <el-form label-position="left">
-              <el-form-item label="Commune pour les adresses:" :size="sizeOfControl">
+            <el-form label-position="left" :size="sizeOfControl">
+              <el-form-item label="Commune (adresse):" :size="sizeOfControl">
                 <el-select v-model="currentOfsFilter" placeholder="Select"
                            :size="sizeOfControl"
                            style=" float:right; right: 1px;"
@@ -190,7 +175,7 @@
                   </el-option>
                 </el-select>
               </el-form-item>
-              <el-form-item label="Choix du fond de plan :" :size="sizeOfControl">
+              <el-form-item label="Fond de plan :" :size="sizeOfControl">
                 <el-select :size="sizeOfControl"
                            v-on:change="changeLayer" v-model="activeLayer"
                            style=" float:right; right: 1px;"
@@ -205,6 +190,7 @@
               </el-form-item>
             </el-form>
           </el-card>
+            </template>
         </el-header>
         <el-main  style="padding: 0">
           <div ref="mymap" class="map-content"></div>
@@ -257,7 +243,7 @@ import listCities from './communesBBLidar2012'
 const positionGareLausanne = [537892.8, 152095.7]
 const SMALL_SCREEN_WIDTH = 638 // smaller then the xs at <768 but at purpose !
 const MEDIUM_SCREEN_WIDTH = 992
-const MIN_HEIGHT = 700
+const MIN_HEIGHT = 600
 const TOOLBARHEIGHT = 34
 const MODULE_NAME = 'cgilVueOlMap'
 const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
