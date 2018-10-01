@@ -241,6 +241,7 @@ import {
   getOlMap,
   getOlView,
   getWktGeometryFeaturesInLayer,
+  getWktGeomFromFeature,
   initNewFeaturesLayer,
   isValidPolygon,
   setCreateMode,
@@ -264,11 +265,9 @@ const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
 
 export default {
   name: 'vue2MapOlSwiss21781',
-  // components: {Button, Container, Header, RadioGroup, Select, Option},
   components: {cgVueAutoComplete},
   data () {
     return {
-      msg: 'Basic OpenLayers Map',
       toolbarHeight: `${TOOLBARHEIGHT}px`,
       mapHeight: `${MIN_HEIGHT}px`,
       isSmallScreen: false,
@@ -553,7 +552,7 @@ export default {
         */
         this.$refs.mymap.style.height = `${this.$refs.mainzone.clientHeight - TOOLBARHEIGHT}px`;
         if (this.$refs.mainzone.clientWidth > 0) {
-          log.l(' # updateScreen screen this.$refs.mymap.clientWidth', this.$refs.mymap.clientWidth )
+          //log.l(`# updateScreen screen this.$refs.mymap.clientWidth ${ this.$refs.mymap.clientWidth}`)
           if (this.$refs.mymap.clientWidth < SMALL_SCREEN_WIDTH) {
             this.isSmallScreen = true
             this.sizeOfControl = 'mini'
@@ -590,6 +589,7 @@ export default {
       this.isSmallScreen = false
       this.sizeOfControl = 'small'
     }
+    this.activeLayer = this.baselayer;
     this.ol_map = getOlMap(this.$refs.mymap, this.ol_view, this.baselayer, this.geojsondata )
     if (this.geojsonurl.length > 4) {
       log.l(`will enter in loadGeoJsonUrlPolygonLayer(geojsonurl:${this.geojsonurl}`);
@@ -604,6 +604,11 @@ export default {
       (evt) => {
       const x = Number(evt.coordinate[0]).toFixed(2);
       const y = Number(evt.coordinate[1]).toFixed(2);
+      let info = {
+        coordinates: [x, y],
+        numFeaturesDetected :  0
+      };
+      let features = [];
         if (DEV) {
           log.t(`## BEGIN GoMap click callback : ${x},${y}`)
           // log.l(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
@@ -611,22 +616,46 @@ export default {
           // log.l(wkt)
         }
         if (this.uiMode === 'NAVIGATE') {
-          const feature = this.ol_map.forEachFeatureAtPixel(
+          const lastfeature = this.ol_map.forEachFeatureAtPixel(
             evt.pixel,
             (feature, layer) => {
-              if (!isNullOrUndefined(layer)) log.l(`feature found in layer : "${layer.get('name')}", layer:`, layer)
-              log.l(`# GoMap click in NAVIGATE mode, evt feature detected :
-                ${dumpFeatureToString(feature)}`, feature)
-
-              log.l(dumpObject2String(feature.getProperties()))
+              let layerName = ''
+              if (!isNullOrUndefined(layer)) {
+                layerName = layer.get('name')
+                log.l(`feature found in layer : "${layerName}"`)
+              }
+              const feature_props = feature.getProperties();
+              log.l(`# GoMap click in NAVIGATE mode, feature detected :
+                ${dumpFeatureToString(feature)}\n ${dumpObject2String(feature_props)}`)
               this.$emit('selfeature', feature)
-              return feature
+              const wkt = getWktGeomFromFeature(feature)
+              if (!isNullOrUndefined(feature_props)) {
+                const feature_info = {
+                  id:feature_props.id,
+                  layer: layerName,
+                  geometryWKT: wkt,
+                  data: feature_props
+              }
+                log.l(`Feature id : ${feature_props.id}, info:`, info);
+                features.push(feature_info)
+              }
+              //return feature
             });
-          if (!isNullOrUndefined(feature)) {
-            log.l('Feature found :', feature);
-            const val = feature.values_;
+          if (features.length > 0) {
+            log.l('->Array of features found :', features);
+            info.numFeaturesDetected = features.length;
+            info.features = features;
+          } else {
+            info.numFeaturesDetected = 0;
+            info.features = null;
+          }
+          this.$emit('mapclick', info);
+
+          if (!isNullOrUndefined(lastfeature)) {
+            log.l('->Feature found :', lastfeature);
+            /*const val = feature.getProperties();
             if (!isNullOrUndefined(val)) {
-              const info = {coordinates: [x, y], id: val.id};
+              const info = {coordinates: [x, y], id: val.id, data: val};
               log.l(`Feature id : ${val.id}, info:`, info);
               this.$emit('mapclick', info);
               // case of an iframe containing a function getMapClickCoordsXY
@@ -638,7 +667,7 @@ export default {
               if (typeof (window.getMapClickCoordsXY) !== 'undefined') {
                 window.getMapClickCoordsXY(info);
               }
-            }
+            }*/
           }
         } else {
           if (this.uiMode === 'CREATE') {

@@ -77,6 +77,7 @@
                    baselayer="fonds_geo_osm_bdcad_gris"
                    :geojsondata="geojson"
                    @gomapSaveGeomClick="saveGeometry"
+                   @mapclick="handleMapCLick"
       ></cgil-ol-map>
     </div>
     <el-input
@@ -100,8 +101,13 @@
 
 <script>
 import cgilOlMap from './cgil-vue-olmap'
+import Log from 'cgil-log'
+import {DEV} from './config'
 import { geodata } from './data'
 import {Conv21781To2056} from './OpenLayersSwiss21781'
+
+const MODULE_NAME = 'DemoVueOlMap';
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
 
 const pos = [538350.5, 152669.0] // cathedrale Lausanne
 export default {
@@ -118,7 +124,7 @@ export default {
       geojson: geodata,
       initialGeom:
           `MULTIPOLYGON(
-          ((538319.52 152664.64,538318.72 152659.83,538343.55 152656.63,538344.15 152661.63,538319.52 152664.64)),
+          ((538319.23456 152664.64,538318.72 152659.83,538343.55 152656.63,538344.15 152661.63,538319.52 152664.64)),
           ((538352.76 152659.83,538351.16 152645.21,538361.57 152644.41,538362.78 152651.02,538372.19 152650.02,538374.19 152657.03,538352.76 152659.83))
                    )`,
       savedGeom: null
@@ -132,21 +138,24 @@ export default {
     }
   },
   mounted () {
-    console.info('In demoApp cgil-vue-olmap mounted: ')
+    log.t('In demoApp cgil-vue-olmap mounted: ')
     this.testConversionToMn95()
   },
   methods: {
     saveGeometry: function (val) {
-      console.info('In demoApp cgil-vue-olmap event gomapSaveGeomClick received : ', val)
+      log.t('In demoApp cgil-vue-olmap event gomapSaveGeomClick received : ', val)
       this.savedGeom = val
     },
     testConversionToMn95() {
       const PFP1_MN03 = [537681.26 , 150797.21]
       const PFP1_MN95 = [2537680.826 , 1150797.6]
       const testMN95 = Conv21781To2056(PFP1_MN03[0], PFP1_MN03[1])
-      console.log(`Point in REAL MN95  is ${PFP1_MN95[0]} / ${PFP1_MN95[1]}`)
-      console.log(`Proj4Js conversion  is ${testMN95.x} / ${testMN95.y}`)
+      log.l(`Point in REAL MN95  is ${PFP1_MN95[0]} / ${PFP1_MN95[1]}`)
+      log.l(`Proj4Js conversion  is ${testMN95.x} / ${testMN95.y}`)
 
+    },
+    handleMapCLick(info) {
+      log.t('#### In handleMapCLick cgil-vue-olmap event mapclick received : ', info)
     }
   }
 }
