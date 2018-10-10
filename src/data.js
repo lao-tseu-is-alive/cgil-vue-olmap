@@ -11,7 +11,7 @@ export const geodata = {
     },
     properties: {
       id: 1000,
-      name: 'Nice red circle 1000',
+      title: 'Un rond c\'est bon ! Nice red circle id:1000',
       fill_color: 'rgba(255, 0, 0, 0.38)',
       stroke_color: '#FF0000',
       stroke_width: 33,
@@ -26,7 +26,7 @@ export const geodata = {
     },
     properties: {
       id: 131104,
-      name: 'MultiPolygon rouge,jaune ',
+      title: 'Oh look my great MultiPolygon rouge,jaune id:131104',
       fill_color: 'rgba(255, 255, 0, 0.8)',
       stroke_color: '#FF0000',
       stroke_width: 3,
@@ -41,7 +41,7 @@ export const geodata = {
     },
     properties: {
       id: 130779,
-      name: 'polygone black,white  130779',
+      title: 'Que bonito este polygono black,white  id:130779',
       fill_color: 'rgba(255, 255, 255, 0.8)',
       stroke_color: '#000000',
       stroke_width: 3,
@@ -56,7 +56,7 @@ export const geodata = {
     },
     properties: {
       id: 131254,
-      name: 'polygone cyan,cyan 130779',
+      title: 'So nice this multi-polygon ! cyan,cyan 130779 id:131254',
       fill_color: 'rgba(0, 255, 255, 0.8)',
       stroke_color: '#00ffff',
       stroke_width: 3,
@@ -71,7 +71,7 @@ export const geodata = {
     },
     properties: {
       id: 134199,
-      name: 'polygone jaune,jaune 134199',
+      title: 'I Love this one, a kind of litle SUN ! polygone jaune,jaune id:134199',
       fill_color: 'rgba(255, 255, 0, 0.8)',
       stroke_color: '#FFFF00',
       stroke_width: 3,
@@ -86,7 +86,7 @@ export const geodata = {
     },
     properties: {
       id: 6789123,
-      name: 'polygone jaune,vert 6789123 en dessus de 134199',
+      title: 'polygone jaune,vert 6789123 en dessus de 134199',
       fill_color: 'rgba(0, 255, 0, 0.8)',
       stroke_color: '#000000',
       stroke_width: 3,
@@ -101,7 +101,7 @@ export const geodata = {
     },
     properties: {
       id: 134200,
-      name: 'polygone magenta,rouge 134200',
+      title: 'polygone magenta,rouge 134200',
       fill_color: 'rgba(255, 0, 0, 0.8)',
       stroke_color: '#ff00ff',
       stroke_width: 3,
@@ -116,7 +116,7 @@ export const geodata = {
     },
     properties: {
       id: 134120,
-      name: 'polygone vert,bleu 134120',
+      title: 'Green like Earth, blue like the Sky ! polygone vert,bleu 134120',
       fill_color: 'rgba(0, 255, 0, 0.8)',
       stroke_color: '#00FF00',
       stroke_width: 3,
@@ -131,7 +131,7 @@ export const geodata = {
     },
     properties: {
       id: 131043,
-      name: 'polygone jaune 131043',
+      title: 'Je veux du Soleil ...polygone jaune 131043',
       fill_color: 'rgba(255, 255, 0, 0.8)',
       stroke_color: '#FFFF00',
       stroke_width: 3,
@@ -142,11 +142,24 @@ export const geodata = {
     type: 'Feature',
     geometry: {
       type: 'MultiPolygon',
+      coordinates: [[[[538320.2, 152655.15], [538318.1, 152643.85], [538349.5, 152641.05],  [538309.21, 152654.12], [538320.2, 152655.15]]]],
+    },
+    properties: {
+      id: 100404,
+      title: '<plaintext>ce polygone est invalide 100404 et contient des tags html<script>window.alert(\'coucou\');</script>',
+      fill_color: 'rgba(255, 100, 0, 0.8)',
+      stroke_color: '#FFFF00',
+      stroke_width: 4,
+    },
+  }, {
+    type: 'Feature',
+    geometry: {
+      type: 'MultiPolygon',
       coordinates: [[[[538012.21654, 152775.755894], [538012.01654, 152772.555894], [538030.51654, 152770.455894], [538039.46654, 152767.655894], [538041.26654, 152767.405894], [538043.61654, 152767.455894], [538045.56654, 152767.905894], [538047.76654, 152768.755894], [538044.51654, 152772.305894], [538044.76654, 152772.555894], [538043.96654, 152773.455894], [538044.26654, 152773.655894], [538036.86654, 152780.855894], [538032.81654, 152784.405894], [538030.51654, 152786.255894], [538027.16654, 152782.455894], [538022.76654, 152786.405894], [538020.06654, 152783.155894], [537988.11654, 152800.705894], [537975.91654, 152807.505894], [537968.31654, 152811.805894], [537965.26654, 152813.655894], [537962.31654, 152815.855894], [537962.96654, 152816.855894], [537960.71654, 152818.755894], [537953.11654, 152811.455894], [537956.36654, 152808.905894], [537960.46654, 152806.405894], [537964.91654, 152803.905894], [537976.06654, 152797.805894], [537982.76654, 152794.155894], [537995.96654, 152786.805894], [538009.91654, 152778.955894], [538009.96654, 152778.605894], [538010.66654, 152778.555894], [538011.21654, 152778.255894], [538011.66654, 152778.005894], [538012.06654, 152777.405894], [538012.31654, 152776.755894], [538012.36654, 152776.355894], [538012.21654, 152775.755894]]]],
     },
     properties: {
       id: 157272,
-      name: 'polygone bleu 157272',
+      title: 'L\'azur jusqu\'à l\'infini ! C\'est beau polygone bleu 157272',
       fill_color: 'rgba(0, 0, 255, 0.8)',
       stroke_color: '#0000FF',
       stroke_width: 3,

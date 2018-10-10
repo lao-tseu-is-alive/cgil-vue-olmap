@@ -16,6 +16,16 @@
     overflow: hidden;
   }
 
+  .tooltip {
+    position: relative;
+    padding: 3px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    opacity: 0.8;
+    white-space: nowrap;
+    font: 12pt sans-serif;
+}
+
   /*
       .map-toolbar {
           height: $toolbar_height;
@@ -113,15 +123,21 @@
                                   :size="sizeOfControl"
                                   title="Cliquez pour sélectionner le mode de travail">
                     <el-radio-button v-for="item in modeOptions"
-                                     :label="item.value" :key="item.value">{{item.label}}
+                                     :label="item.value" :key="item.value"
+                                     border :size="sizeOfControl"
+                                     :disabled="editDisabled(item.value)">{{item.label}}
                     </el-radio-button>
                   </el-radio-group>
 
                 </el-button-group>
-                <el-button id="cmdSave" v-show="editGeomEnabled " type="warning" :size="sizeOfControl"
+                <el-button id="cmdSave" v-show="editGeomEnabled " type="warning" :size="sizeOfControl" :disabled="!(getNumPolygons > 0)"
                            @click="saveNewFeatures">Sauver
                 </el-button>
                 <span class="gostatus" v-show="(getNumPolygons > 0) && !isSmallScreen">{{getNumPolygons}} Polygones</span>
+                <template v-if="DEV">
+                  <el-button type="primary" icon="el-icon-star-off"size="mini" circle
+                  @click="_testCommand"></el-button>
+                </template>
               </div>
               <div class="grid-content" v-if="!editGeomEnabled && searchEnabled">
                 <!-- TODO trouver une solution qui evite les 2 cg-vue-auto-complete tout en etant responsive -->
@@ -193,7 +209,9 @@
             </template>
         </el-header>
         <el-main  style="padding: 0">
-          <div ref="mymap" class="map-content"></div>
+          <div ref="mymap" class="map-content">
+            <div ref="tooltip" class="tooltip"></div>
+          </div>
         </el-main>
       </el-container>
     </div>
@@ -211,16 +229,17 @@ import {BASE_REST_API_URL, DEV, geoJSONUrl} from './config'
   */
 import OlCollection from 'ol/Collection'
 import OlFormatWKT from 'ol/format/WKT'
+import OlOverlay from 'ol/Overlay'
 import {dumpObject2String, isNullOrUndefined} from 'cgil-html-utils'
 import Log from 'cgil-log'
 // not using cgil-vue-autocomplete npm to handle element-ui integration
 import cgVueAutoComplete from './cgil-vue-autocomplete-element-ui'
 import {
-  addGeoJSONPolygonLayer,
   addGeoJsonPolygonToLayer,
   loadGeoJsonUrlPolygonLayer,
   addWktPolygonToLayer,
   dumpFeatureToString,
+  flyTo,
   getMultiPolygonWktGeometryFromPolygonFeaturesInLayer,
   getNumberFeaturesInLayer,
   getNumVerticesPolygonFeature,
@@ -230,10 +249,11 @@ import {
   getWktGeomFromFeature,
   initNewFeaturesLayer,
   isValidPolygon,
+  isValidFeature,
   setCreateMode,
   setModifyMode,
   setTranslateMode,
-  setDeleteMode
+  setDeleteMode,
 } from './OpenLayersSwiss21781'
 
 import listCities from './communesBBLidar2012'
@@ -254,6 +274,7 @@ export default {
   components: {cgVueAutoComplete},
   data () {
     return {
+      DEV,
       toolbarHeight: `${TOOLBARHEIGHT}px`,
       mapHeight: `${MIN_HEIGHT}px`,
       isSmallScreen: false,
@@ -266,6 +287,8 @@ export default {
       maxFeatureIdCounter: 0, // to give an id to polygon features
       ol_newFeatures: null, // ol collection of features used as vector source for CREATE mode
       ol_newFeaturesLayer: null, // Vector Layer for storing new features
+      ol_GeoJsonFeaturesLayer: null, // Vector Layer for storing external GeoJson
+      ol_Overlay: null, // Overlay to display tooltip
       ol_Active_Interactions: [],
       activeLayer: 'fonds_geo_osm_bdcad_couleur',
       addressFound: null, // selected address to search
@@ -274,19 +297,19 @@ export default {
       geoAdrUrl: `${BASE_REST_API_URL}adresses/search_position?ofs=${this.ofsFilter}`, // backend to find address
       modeOptions: [{
         value: 'NAVIGATE',
-        label: 'Naviguer'
+        label: 'Naviguer',
       }, {
         value: 'CREATE',
-        label: 'Créer'
+        label: 'Créer',
       }, {
         value: 'EDIT',
-        label: 'Editer'
+        label: 'Editer',
       }, {
         value: 'TRANSLATE',
-        label: 'Déplacer'
+        label: 'Déplacer',
       }, {
         value: 'DELETE',
-        label: 'Supprimer'
+        label: 'Supprimer',
       }],
       layerOptions: [{
         value: 'fonds_geo_osm_bdcad_couleur',
@@ -361,7 +384,7 @@ export default {
   computed: {
     getNumPolygons: function () {
       return getNumberFeaturesInLayer(this.ol_newFeaturesLayer)
-    }
+    },
   },
   updated: function () {
     log.t(`## in updated $nextTick`)
@@ -372,8 +395,23 @@ export default {
     })
   },
   methods: {
+    runFunction(name, params = null) {
+      const fn = this[name];
+      if (typeof fn !== 'function') return;
+      fn.apply(this, params);
+    },
+    editDisabled: function (mode) {
+      if ((mode == 'NAVIGATE') || (mode == 'CREATE')) {
+        return false
+      } else {
+        const isEditDisabled = (this.getNumPolygons < 1)
+        // log.t(`## in editDisabled computed is EditValid: ${isEditDisabled}`)
+        return isEditDisabled
+      }
+    },
     _updateGeometry: function () {
-      if (!isNullOrUndefined(this.geomWkt)) {
+      log.t(`# in _updateGeometry geomWkt : ${this.geomWkt}\n geomGeoJSON: ${this.geomGeoJSON}`)
+      if ((!isNullOrUndefined(this.geomWkt)) && (this.geomWkt.length > 5)) {
         log.t(`# in _updateGeometry for geomWkt`, this.geomWkt)
         // TODO check for identical features and do not add them twice
         const numFeaturesAdded = addWktPolygonToLayer(this.ol_newFeaturesLayer, this.geomWkt, this.maxFeatureIdCounter)
@@ -389,9 +427,9 @@ export default {
         log.t(`# in _updateGeometry for geomGeoJSON`, this.geomGeoJSON)
         const numFeaturesAdded = addGeoJsonPolygonToLayer(this.ol_newFeaturesLayer, this.geomGeoJSON, this.maxFeatureIdCounter)
         if (isNullOrUndefined(numFeaturesAdded)) {
-          log.e(`# ERROR tying to add this invalid Geom from geomGeoJSON: ${this.geomGeoJSON}`, this.geomGeoJSON)
+          log.e(`# ERROR in _updateGeometry tying to add this invalid Geom from geomGeoJSON: ${this.geomGeoJSON}`, this.geomGeoJSON)
         } else {
-          log.l(`Successfully added this geomGeoJSON to layer now layer has ${numFeaturesAdded} features !`)
+          log.l(`in _updateGeometry successfully added this geomGeoJSON to layer now layer has ${numFeaturesAdded} features !`)
           this.maxFeatureIdCounter += numFeaturesAdded
         }
       }
@@ -404,6 +442,18 @@ export default {
         this.ol_map.getView()
             .fit(extent, this.ol_map.getSize());
       }
+    },
+    _testCommand: function() {
+      this.gotoNewPos([535895.58, 153129.57])
+      const olLayers = this.ol_map.getLayers()
+      olLayers.forEach((layer, i, a) => {
+        if (layer.type == 'VECTOR') {
+          const numFeatures = getNumberFeaturesInLayer(layer)
+          log.w(`# in _testCommand Layer(${i}) type: ${layer.type} name: ${layer.get('name')} num:${numFeatures}`, layer)
+        }
+      })
+
+      //const t = this.ol_map.features.map(o => o.properties);
     },
     changeLayer: function (event) {
       let selectedLayer = null
@@ -450,30 +500,38 @@ export default {
               // here is a good place to save geometry
               const formatWKT = new OlFormatWKT()
               let featureWKTGeometry = formatWKT.writeFeature(newGeom)
-              if (DEV) {
-                log.l(`## in changeMode callback for setCreateMode`, newGeom)
-                log.l(`** newGeom in wkt format : ${featureWKTGeometry}`)
+              if (isValidFeature(newGeom)) {
+                log.t(`## in changeMode CREATE callback for setCreateMode  OK GEOM VALID ${dumpFeatureToString(newGeom)}`)
+                this.maxFeatureIdCounter += 1;
+              } else {
+                log.e(`## in changeMode CREATE callback for setCreateMode  KO GEOM INVALID ${dumpFeatureToString(newGeom)}`)
+                this.showMessage(`ATTENTION : Ce dernier polygone est INVALIDE ! Veuillez le corriger SVP `, 'error')
               }
               let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
               this.$emit('gomapgeomchanged', wkt)
             })
           break
         case 'EDIT':
-          setModifyMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions,
+          setModifyMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions,this.maxFeatureIdCounter,
             (newGeom) => {
-              log.t(`## in changeMode callback for setModifyMode`, newGeom)
-              // log.l(`** newGeom in wkt format : ${featureWKTGeometry}`)
+            log.t(`## in changeMode EDIT callback for setModifyMode ${dumpFeatureToString(newGeom)}`, newGeom)
+              if (isValidFeature(newGeom)) {
+                log.t(`## in changeMode EDIT callback for setModifyMode  OK GEOM VALID ${dumpFeatureToString(newGeom)}`)
+              } else {
+                log.e(`## in changeMode EDIT callback for setCreateMode  KO GEOM INVALID ${dumpFeatureToString(newGeom)}`)
+                this.showMessage(`ATTENTION : Ce dernier polygone est INVALIDE ! Veuillez le corriger SVP `, 'error')
+              }
               let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
               this.$emit('gomapgeomchanged', wkt)
-              log.l(`** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
+              log.l(`## in changeMode EDIT callback for setModifyMode
+              ** BEGIN LAYER CONTENTS **\n${getWktGeometryFeaturesInLayer(this.ol_newFeaturesLayer)}\n** END LAYER CONTENTS **`)
             })
           break
         case 'TRANSLATE':
-          // TODO simplify precision of coords after a translate
           setTranslateMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions)
           break
         case 'DELETE':
-          setDeleteMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions)
+          setDeleteMode(this.ol_map, this.ol_newFeaturesLayer, this.ol_Active_Interactions, this.maxFeatureIdCounter)
           break
         default:
           if (DEV) log.w(`## in changeMode selectedMode = ${selectedMode} NOT IMPLEMENTED`)
@@ -493,7 +551,6 @@ export default {
       if (this.ol_newFeatures !== null) {
         let wkt = getMultiPolygonWktGeometryFromPolygonFeaturesInLayer(this.ol_newFeaturesLayer)
         this.$emit('gomapSaveGeomClick', wkt)
-        this.showMessage(`Data SAVED ${wkt}`)
       }
     },
     showMessage: function (message, type = 'success') {
@@ -506,8 +563,19 @@ export default {
         type: type
       })
     },
+
+    gotoNewPos: function (arrCoordPos, zoomLevel=7) {
+      if (!isNullOrUndefined(arrCoordPos)) {
+        log.t(`# gotoNewPos x,y = (${arrCoordPos[0]},${arrCoordPos[1]}) zoom = ${zoomLevel}`)
+        const newPos = [ Number.parseFloat(arrCoordPos[0]) , Number.parseFloat(arrCoordPos[1])]
+        flyTo(newPos, zoomLevel, this.ol_view, (v) => {
+          log.t(`# gotoNewPos x,y = (${arrCoordPos[0]},${arrCoordPos[1]}) zoom = ${zoomLevel} flyTo callback`, v)
+        })
+      }
+    },
+
     gotoSelectedAdr: function (objSelected) {
-      log.t(`# doSomethingWithSelectedAdr`, objSelected)
+      log.t(`# gotoSelectedAdr`, objSelected)
       if (!isNullOrUndefined(objSelected)) {
         // this.arrSelectionsAdresse.push(objSelected)
         if (!isNullOrUndefined(objSelected.id)) {
@@ -520,6 +588,7 @@ export default {
     },
     aNetworkProblemHappened: function (msg) {
       log.e(`aNetworkProblemHappened --> ${msg}`)
+      this.showMessage(`ATTENTION : Il y a eut un problème réseau ${msg}`, 'error')
     },
     toggleConfig: function () {
       this.showConfig = !this.showConfig
@@ -579,13 +648,92 @@ export default {
     this.ol_map = getOlMap(this.$refs.mymap, this.ol_view, this.baselayer, this.geojsondata )
     if (this.geojsonurl.length > 4) {
       log.l(`will enter in loadGeoJsonUrlPolygonLayer(geojsonurl:${this.geojsonurl}`);
-      loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl, null, 'ol_vector_layer_geojsonurl');
+      loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl,
+                                 (newOlLayer) => { log.l('callback for loadGeoJsonUrlPolygonLayer layer:', newOlLayer)},
+                                 'ol_vector_layer_geojsonurl');
     }
     this.ol_newFeatures = new OlCollection()
     this.ol_newFeaturesLayer = initNewFeaturesLayer(this.ol_map, this.ol_newFeatures)
     this._updateGeometry()
     this.updateScreen()
+    // OVERLAY FOR TOOLTIP
+    this.ol_Overlay = new OlOverlay ({
+                     element: this.$refs.tooltip,
+                     offset: [10, 0],
+                     positioning: 'bottom-center'
+                   })
+    this.ol_map.addOverlay(this.ol_Overlay)
+
     // ## EVENTS ##
+    this.ol_map.on('pointermove',
+      (evt) => {
+      const localDebug = false
+      if (this.uiMode === 'CREATE') return;
+      let features = [];
+      const x = Number(evt.coordinate[0]).toFixed(2);
+      const y = Number(evt.coordinate[1]).toFixed(2);
+      let info = {
+        coordinates: [x, y],
+        numFeaturesDetected :  0
+      };
+      const lastfeature = this.ol_map.forEachFeatureAtPixel(
+            evt.pixel,
+            (feature, layer) => {
+              let layerName = ''
+              if (!isNullOrUndefined(layer)) {
+                layerName = layer.get('name')
+                if (localDebug) log.l(`feature found in layer : "${layerName}"`)
+              }
+              const feature_props = feature.getProperties();
+              if (localDebug) log.l(`# GoMap pointermove EVENT, feature detected :\n${dumpFeatureToString(feature)}`)
+              if (!isNullOrUndefined(feature_props)) {
+                const feature_info = {
+                  id:feature_props.id,
+                  feature : feature,
+                  layer: layerName,
+                  data: feature_props
+              }
+                //log.l(`Feature id : ${feature_props.id}, info:`, info);
+                features.push(feature_info)
+              } else {
+                features.push({
+                  id:0,
+                  feature : feature,
+                  layer: layerName,
+                })
+              }
+              //return feature
+            }); //end of forEachFeatureAtPixel
+          if (features.length > 0) {
+            if (localDebug) log.l('GoMap pointermove EVENT ->Array of features found :', features);
+            info.numFeaturesDetected = features.length;
+            info.features = features;
+            let strToolTip = ''
+            features.forEach((feat_info) =>{
+              const currentTitle = feat_info.data.title
+              if (!isNullOrUndefined(currentTitle) ) {
+                strToolTip += currentTitle.replace(/(<([^>]+)>)/ig,"") + '<br>';
+                if (!isValidFeature(feat_info.feature)){
+                  strToolTip += '<em> ## ATTENTION CETTE GEOMETRIE EST INVALIDE ! ##</em><br>';
+                }
+              }
+            })
+            if (strToolTip.length > 0) {
+              this.ol_Overlay.setPosition(evt.coordinate);
+              this.$refs.tooltip.style.display = '';
+              this.$refs.tooltip.innerHTML = strToolTip;
+            } else {
+              this.$refs.tooltip.innerHTML = ''
+              this.$refs.tooltip.style.display = 'none';
+            }
+
+          } else {
+            info.numFeaturesDetected = 0;
+            info.features = null;
+            this.$refs.tooltip.style.display = 'none';
+          }
+
+      })
     this.ol_map.on('click',
       (evt) => {
       const x = Number(evt.coordinate[0]).toFixed(2);
@@ -611,8 +759,8 @@ export default {
                 log.l(`feature found in layer : "${layerName}"`)
               }
               const feature_props = feature.getProperties();
-              log.l(`# GoMap click in NAVIGATE mode, feature detected :
-                ${dumpFeatureToString(feature)}\n ${dumpObject2String(feature_props)}`)
+              log.l(`# GoMap click in NAVIGATE mode, feature detected :\n
+                ${dumpFeatureToString(feature)}`)
               this.$emit('selfeature', feature)
               const wkt = getWktGeomFromFeature(feature)
               if (!isNullOrUndefined(feature_props)) {
@@ -660,6 +808,9 @@ export default {
             if (!isNullOrUndefined(this.ol_interaction_draw)) {
               if (this.ol_interaction_draw.getActive() === true) {
                 let numVertices = getNumVerticesPolygonFeature(this.ol_interaction_draw.currentFeature)
+                log.t(`## GoMap click in CREATE MODE ${x},${y} nombre sommets : ${numVertices}`)
+               /* j'enleve ce code qui bloque la création de certain polygones qui seront au final correct
+               // on controle si le polygone est valide uniquement à la fin
                 if (numVertices > 3) {
                   let ok = isValidPolygon(this.ol_interaction_draw.currentFeature, evt.coordinate)
                   if (ok) {
@@ -669,6 +820,7 @@ export default {
                     this.ol_interaction_draw.removeLastPoint()
                   }
                 }
+                */
               }
             }
           }
@@ -681,6 +833,7 @@ export default {
       this.ol_map.updateSize()
       this.updateScreen()
     }
+    // window.onclick = (e) => { log.l(`## GoMap IN windowonclick client Width x Height : `, e) }
   }
 }
 </script>

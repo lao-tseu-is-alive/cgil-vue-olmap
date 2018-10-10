@@ -1,11 +1,11 @@
 import {DEV} from './config'
-import {functionExist, isNullOrUndefined} from 'cgil-html-utils'
+import {dumpObject2String, functionExist, isNullOrUndefined} from 'cgil-html-utils'
 import Log from 'cgil-log';
 import OlMap from 'ol/Map'
 import OlView from 'ol/View'
 import OlCollection from 'ol/Collection'
 import OlCircle from 'ol/style/Circle'
-import {singleClick, shiftKeyOnly} from 'ol/events/condition'
+import {singleClick, shiftKeyOnly, altKeyOnly} from 'ol/events/condition'
 import OlFeature from 'ol/Feature'
 import OlFill from 'ol/style/Fill'
 import OlFormatGeoJSON from 'ol/format/GeoJSON'
@@ -37,7 +37,7 @@ import {distance2Point, pointsIsEqual, EPSILON, polygonSelfIntersect} from './2d
 export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
 export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
 const MODULE_NAME='OpenLayersSwiss21781';
-const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 1);
+const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 2);
 const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
 const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
 const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
@@ -276,7 +276,7 @@ export function getOlMap (divMap,
   let newVectorLayer = null;
   if (!isNullOrUndefined(geojsonData)) {
     log.l(`# will load GeoJSON Polygon Layer( geojsondata:${geojsonData.features.lenght}`, geojsonData)
-    const vectorSource = getVectorSourceGeoJson(geojsonData)
+    const vectorSource = getVectorSourceGeoJson(geojsonData, false)
     newVectorLayer = new OlLayerVector({
       title: 'ol_vector_layer_geojsondata',
       name: 'ol_vector_layer_geojsondata',
@@ -310,14 +310,28 @@ function fetchStatus(response) {
   return Promise.reject(new Error(response.statusText));
 }
 
-function getVectorSourceGeoJson(geoJsonData) {
-  return new OlSourceVector({
+function getVectorSourceGeoJson(geoJsonData, removeInvalidFeatures= true) {
+  log.t('## in getVectorSourceGeoJson ');
+  const tempSource = new OlSourceVector({
     format: new OlFormatGeoJSON({
       defaultDataProjection: 'EPSG:21781',
       projection: 'EPSG:21781',
     }),
     features: (new OlFormatGeoJSON()).readFeatures(geoJsonData),
   });
+  if (removeInvalidFeatures) {
+    // filter out any invalid polygon
+    let arrFeatures = tempSource.getFeatures();
+    arrFeatures.forEach((feature) => {
+      if (!isValidFeature(feature)) {
+        log.w(
+        `WARNING in getVectorSourceGeoJson removing INVALID feature :\n${dumpFeatureToString(
+        feature)}`);
+        tempSource.removeFeature(feature)
+      }
+    })
+  }
+  return tempSource;
 }
 
 function getPolygonStyle(
@@ -463,7 +477,7 @@ export function initNewFeaturesLayer (olMap, olFeatures) {
     source: new OlSourceVector({features: olFeatures}),
     style: new OlStyle({
       fill: new OlFill({
-        color: 'rgba(255, 0, 0, 0.2)'
+        color: 'rgba(255, 0, 0, 0.3)'
       }),
       stroke: new OlStroke({
         color: '#ffee00',
@@ -483,6 +497,7 @@ export function initNewFeaturesLayer (olMap, olFeatures) {
 }
 
 export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCounter, endCreateCallback) {
+  log.t(`# in setCreateMode baseCounter : ${baseCounter}`)
   const modify = new OlInteractionModify({
     features: olFeatures,
     // the SHIFT key must be pressed to delete vertices, so
@@ -528,7 +543,7 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
     }
     */
   })
-  var id = baseCounter + 1
+  let id = baseCounter
   draw.on('change', function (e) {
     log.t(`IN setCreateMode EVENT.change :`, e)
   })
@@ -538,31 +553,30 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
     }
   })
   draw.on('drawstart', function (e) {
+    id +=1
+    e.feature.setId(id)
+    e.feature.setProperties({'id': id})
     if (DEV) {
-      console.log(`%c IN setCreateMode EVENT.drawstart:`, 'background: #F4D03F; color: #111', e)
+      console.log(`%c IN setCreateMode EVENT.drawstart: baseCounter : ${baseCounter} \n ${dumpFeatureToString(e.feature)}`, 'background: #F4D03F; color: #111', e)
     }
-    this.currentFeature = e.feature
   })
   draw.on('drawend', function (e) {
-    let multiPolygon = new OlMultiPolygon([])
+    //let multiPolygon = new OlMultiPolygon([])
     let currentFeature = e.feature // this is the feature fired the event
     currentFeature.setId(id)
+    currentFeature.setProperties({'id': id})
+    if (isValidFeature(currentFeature)){
+      currentFeature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
+    } else {
+      currentFeature.setProperties({'title': `POLYGONE [${id}] INVALIDE`})
+    }
     log.t(`INSIDE setCreateMode event drawend currentFeature: ${dumpFeatureToString(currentFeature)}`)
     let currentPolygon = currentFeature.getGeometry()
     let exteriorRingCoords = currentPolygon.getLinearRing(0).getCoordinates()
       .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
     currentPolygon.setCoordinates([exteriorRingCoords], 'XY')
-    multiPolygon.appendPolygon(currentPolygon)
-    let multiPolygonFeature = new OlFeature({
-      geometry: multiPolygon
-    })
-    multiPolygonFeature.setId(id)
-    id = id + 1
-    if (DEV) {
-      console.log(`INSIDE setCreateMode event drawend multiPolygonFeature: ${dumpFeatureToString(multiPolygonFeature)}`)
-    }
     if (functionExist(endCreateCallback)) {
-      endCreateCallback(multiPolygonFeature)
+      endCreateCallback(currentFeature)
     }
   })
   olMap.addInteraction(draw)
@@ -570,8 +584,9 @@ export function setCreateMode (olMap, olFeatures, arrInteractionsStore, baseCoun
   return draw
 } // end of setCreateMode
 
-export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endModifyCallback) {
-  // let multiPolygon = new OlMultiPolygon([])
+export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, baseCounter, endModifyCallback ) {
+  log.t(`# in setModifyMode baseCounter : ${baseCounter}`)
+  
   let modifyStyles = [
     /* We are using two different styles for the polygons:
      *  - The first style is for the polygons themselves.
@@ -603,7 +618,7 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
       }
     })
   ]
-  if (DEV) console.log(overlayStyle)
+  
   let select = new OlInteractionSelect({
     layers: [olLayer2Edit],
     wrapX: false,
@@ -627,7 +642,14 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
     })
   })
   let modify = new OlInteractionModify({
-    features: selectSource // use our custom collection instead of select.getFeatures()
+    features: selectSource, // use our custom collection instead of select.getFeatures()
+    // the SHIFT key must be pressed to delete vertices, so
+    // that new vertices can be drawn at the same position
+    // of existing vertices
+    deleteCondition: function (event) {
+      return shiftKeyOnly(event) &&
+        singleClick(event)
+    }
   })
   let originalCoordinates = {}
   modify.on('modifystart', function (evt) {
@@ -636,16 +658,14 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
     })
   })
   modify.on('modifyend', function (e) {
+    let currentFeatures = e.features.getArray()
     log.t(`-->INSIDE setModifyMode event modifyend : `, e)
     let newPoint = e.mapBrowserEvent.coordinate // point of last click
-    let currentFeatures = e.features.getArray()
+    
     const formatWKT = new OlFormatWKT()
     currentFeatures.forEach(function (feature) {
       let isItValid = isValidPolygon(feature, newPoint)
-      if (DEV) {
-        log.l(`--> in modifyend featureWKTGeometry=\n${dumpFeatureToString(feature)}`)
-        log.l(`--> in modifyend isValidPolygon=${isItValid}`)
-      }
+      log.l(`--> in modifyend featureWKTGeometry=\n${dumpFeatureToString(feature)}`)
       if ((feature in originalCoordinates) && !isItValid) {
         feature.getGeometry().setCoordinates(originalCoordinates[feature])
         delete originalCoordinates[feature]
@@ -653,14 +673,19 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
         selectSource.remove(feature)
         selectSource.push(feature)
       }
-      let featureWKTGeometry = formatWKT.writeFeature(feature)
-      if (DEV) {
-        log.l(`--> in modifyend featureWKTGeometry= ${featureWKTGeometry}`)
+      const id = feature.getProperties()['id'] || 0;
+      if (isValidFeature(feature)){
+        feature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
+      } else {
+        feature.setProperties({'title': `POLYGONE [${id}] INVALIDE`})
       }
+      if (functionExist(endModifyCallback)) {
+        endModifyCallback(feature)
+      }
+      let featureWKTGeometry = formatWKT.writeFeature(feature)
+      log.l(`--> in modifyend featureWKTGeometry= ${featureWKTGeometry}`)
     })
-    if (functionExist(endModifyCallback)) {
-      endModifyCallback(currentFeatures)
-    }
+    
   })
   olMap.addInteraction(select)
   olMap.addInteraction(modify)
@@ -669,6 +694,7 @@ export function setModifyMode (olMap, olLayer2Edit, arrInteractionsStore, endMod
 }
 
 export function setTranslateMode (olMap, olLayer2Translate, arrInteractionsStore) {
+  log.t(`# in setTranslateMode `)
   let select = new OlInteractionSelect({
     layers: [olLayer2Translate]
   })
@@ -681,7 +707,8 @@ export function setTranslateMode (olMap, olLayer2Translate, arrInteractionsStore
   arrInteractionsStore.push(translate)
 }
 
-export function setDeleteMode (olMap, olLayer2Delete, arrInteractionsStore) {
+export function setDeleteMode (olMap, olLayer2Delete, arrInteractionsStore, baseCounter) {
+  log.t(`# in setModifyMode baseCounter : ${baseCounter}`)
   let select = new OlInteractionSelect({
     layers: [olLayer2Delete]
   })
@@ -778,18 +805,43 @@ export function getWktGeometryFeaturesInLayer (olLayer) {
     return strGeom
   }
 }
+
+export function isValidFeature (olFeature) {
+  const geometryType = olFeature.getGeometry().getType().toUpperCase();
+  let isValid = true;
+  switch (geometryType) {
+      case 'MULTIPOLYGON':
+        isValid = isValidMultiPolygon(olFeature);
+        break;
+      case 'POLYGON':
+        isValid = isValidPolygon(olFeature);
+        break;
+      default:
+        log.w('## isValidFeature : only MULTIPOLYGON and POLYGON are supported for now')
+    }
+    return isValid;
+}
+
 /**
  * Allow to get a string representation of the feature
  * @param {ol.Feature} olFeature : the feature of geometry type Polygon you want to dump
  * @return {string} : the string representation of this feature
  */
 export function dumpFeatureToString (olFeature) {
-  log.t(`in dumpFeatureToString `)
-  let featureWKTGeometry = getWktGeomFromFeature(olFeature)
-  let geometryType = olFeature.getGeometry().getType().toUpperCase()
-  let rev = olFeature.getRevision()
-  let id = olFeature.getId()
-  let featureString = `${geometryType} Feature id=${id}  : (rev ${rev}) -\n${featureWKTGeometry}\n`
+  log.t(`in dumpFeatureToString `);
+  let featureWKTGeometry = getWktGeomFromFeature(olFeature);
+  const geometryType = olFeature.getGeometry().getType().toUpperCase();
+  const rev = olFeature.getRevision();
+  const id = olFeature.getId();
+  const feature_props = olFeature.getProperties();
+  const isValid = isValidFeature(olFeature) ? 'VALID' : 'INVALID';
+  let feature_props_dump = ''
+  if (!isNullOrUndefined(feature_props)) {
+    feature_props_dump = dumpObject2String(feature_props);
+  }
+  let featureString = `\n${isValid} ${geometryType} Feature id=${id}  : (rev ${rev})
+  \n# PROPERTIES:\n${feature_props_dump}
+  \n# WKT GEOMETRY:\n${featureWKTGeometry}\n`
   return featureString
 }
 
@@ -841,7 +893,7 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
-    let id = 0
+    let id = baseCounter
     let source = olLayer.getSource()
     const formatWKT = new OlFormatWKT()
     let feature = formatWKT.readFeature(wktGeometry, {
@@ -861,10 +913,13 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
           if (isValidPolygon(polygonFeature)) {
             // TODO call isPolygonsFeaturesEqual for all existing other polygon
             id += 1 // increment counter
-            polygonFeature.setId(id + baseCounter)
+            polygonFeature.setId(id)
+            polygonFeature.setProperties({'id': id})
+            polygonFeature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
             source.addFeature(polygonFeature)
           } else {
-            log.e('## Error MULTIPOLYGON IS NOT VALID')
+            log.e('## Error in addWktPolygonToLayer : MULTIPOLYGON IS NOT VALID')
+            log.e('## Error in addWktPolygonToLayer : invalid polygon is this one:',dumpFeatureToString(polygonFeature))
             return null
           }
         })
@@ -873,10 +928,13 @@ export function addWktPolygonToLayer (olLayer, wktGeometry, baseCounter) {
         if (isValidPolygon(feature)) {
           // let's use this one as it is
           id += 1 // increment counter
-          feature.setId(id + baseCounter)
+          feature.setId(id)
+          feature.setProperties({'id': id})
+          feature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
           source.addFeature(feature)
         } else {
-          log.e('## Error POLYGON IS NOT VALID')
+          log.e('## Error in addWktPolygonToLayer : POLYGON IS NOT VALID')
+          log.e('## Error in addWktPolygonToLayer : invalid polygon is this one:',dumpFeatureToString(feature))
           return null
         }
         break
@@ -992,23 +1050,49 @@ export function isValidPolygon (olFeature, clickPoint = null, removeDuplicates =
       }
     }
     // let's check condition 2
-    let intersects = false
+    let IntersectInfo = {result: false}
     if (coordsPolygon.length > 0) {
       if (debugThis) log.l('## isValidPolygon : Polygon purified Coords', coordsPolygon)
-      intersects = polygonSelfIntersect(coordsPolygon)
+      IntersectInfo = polygonSelfIntersect(coordsPolygon)
     } else {
-      intersects = polygonSelfIntersect(exteriorRingCoords.reduce((r, s) => r.push(s[0], s[1]) && r, []))
+      IntersectInfo = polygonSelfIntersect(exteriorRingCoords.reduce((r, s) => r.push(s[0], s[1]) && r, []))
     }
-    if (debugThis) log.l('## isValidPolygon : polygonSelfIntersect(arrCoords) = ', intersects)
-    if (intersects) {
-      log.e('## isValidPolygon : THIS POLYGON IS NOT VALID')
+    if (IntersectInfo.result) {
+      log.e(`## isValidPolygon : THIS POLYGON IS NOT VALID reason : ${IntersectInfo.msg} at (${IntersectInfo.intersection[0]},${IntersectInfo.intersection[1]})`)
       return false
     }
-    // let's check condition 3
+    // let's implement the check condition 3 in some future because it depends on all other polygons
 
     return true
   } else {
     log.e('## isValidPolygon : only POLYGON features can be tested here')
+    return false
+  }
+}
+
+export function isValidMultiPolygon (olFeature) {
+  const debugThis = false;
+  let geometry = olFeature.getGeometry()
+  let geometryType = geometry.getType().toUpperCase()
+  let checkResultIsValid = true
+  if (geometryType === 'MULTIPOLYGON') {
+    geometry.getPolygons().forEach(function (polygon) {
+      // console.log('## addWktPolygonToLayer found polygon :', polygon)
+      let polygonFeature = new OlFeature({ geometry: polygon })
+      if (isValidPolygon(polygonFeature)) {
+        // TODO call isPolygonsFeaturesEqual for all existing other polygon
+        
+      } else {
+        log.e('## Error in isValidMultiPolygon : MULTIPOLYGON IS NOT VALID')
+        checkResultIsValid = false
+        return false
+      }
+    })
+    // if we are here all polygon ok
+    return checkResultIsValid
+    
+  } else {
+    log.e('## isValidMultiPolygon : only MULTIPOLYGON features can be tested here')
     return false
   }
 }
@@ -1026,31 +1110,40 @@ export function isPolygonsFeaturesEqual (olFeature1, olFeature2) {
 }
 
 export function getArrVerticesPolygonFeature (olFeature, removeDuplicates = true) {
-  let geometry = olFeature.getGeometry()
-  let geometryType = geometry.getType().toUpperCase()
-  log.l(`## getNumDistinctVerticesPolygonFeature : geometryType is ${geometryType}`)
-  if (geometryType === 'POLYGON') {
-    let coordsPolygon = []
-    let exteriorRingCoords = geometry.getLinearRing(0).getCoordinates()
-      .map((p) => p.map((v) => parseFloat(Number(v).toFixed(DIGITIZE_PRECISION))))
-    for (let i = 0; i < exteriorRingCoords.length; i++) {
-      let p = exteriorRingCoords[i]
-      // let's store only distinct points to take into account fake points in create mode
-      if (i === 0) {
-        coordsPolygon.push(p[0], p[1])
-      } else {
-        if (distance2Point(p, exteriorRingCoords[(i - 1)]) >= EPSILON) {
+  if (!isNullOrUndefined(olFeature)) {
+    let geometry = olFeature.getGeometry()
+    let geometryType = geometry.getType()
+                               .toUpperCase()
+    log.l(`## getArrVerticesPolygonFeature : geometryType is ${geometryType}`)
+    if (geometryType === 'POLYGON') {
+      let coordsPolygon = []
+      let exteriorRingCoords = geometry.getLinearRing(0)
+                                       .getCoordinates()
+                                       .map((p) => p.map((v) => parseFloat(
+                                       Number(v)
+                                       .toFixed(DIGITIZE_PRECISION))))
+      for (let i = 0; i < exteriorRingCoords.length; i++) {
+        let p = exteriorRingCoords[i]
+        // let's store only distinct points to take into account fake points in create mode
+        if (i === 0) {
           coordsPolygon.push(p[0], p[1])
+        } else {
+          if (distance2Point(p, exteriorRingCoords[(i - 1)]) >= EPSILON) {
+            coordsPolygon.push(p[0], p[1])
+          }
         }
       }
-    }
-    if (removeDuplicates) {
-      return coordsPolygon
+      if (removeDuplicates) {
+        return coordsPolygon
+      } else {
+        return exteriorRingCoords
+      }
     } else {
-      return exteriorRingCoords
+      log.e('## getArrVerticesPolygonFeature : only POLYGON features can be tested here')
+      return null
     }
   } else {
-    log.e('## getArrVerticesPolygonFeature : only POLYGON features can be tested here')
+    log.e('## getArrVerticesPolygonFeature : olFeature was null or undefined')
     return null
   }
 }
@@ -1063,3 +1156,31 @@ export function getNumVerticesPolygonFeature (olFeature, removeDuplicates = true
     return tmpArray.length
   }
 }
+
+export function flyTo(finalLocation, finalZoom, theOlView, done) {
+        const duration = 2000;
+        const zoom = theOlView.getZoom();
+        let parts = 4;
+        let called = false;
+        function callback(complete) {
+          --parts;
+          if (called) {
+            return;
+          }
+          if (parts === 0 || !complete) {
+            called = true;
+            done(complete);
+          }
+        }
+        theOlView.animate({
+          center: finalLocation,
+          duration: duration
+        }, callback);
+        theOlView.animate({
+          zoom: zoom - 4,
+          duration: duration / 2
+        }, {
+          zoom: finalZoom,
+          duration: duration / 2
+        }, callback);
+      }

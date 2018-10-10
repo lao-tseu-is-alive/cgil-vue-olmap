@@ -81,15 +81,49 @@ function intersects (l1, l2) {
   if (isCcw(l2.p1, l2.p2, l1.p1) * isCcw(l2.p1, l2.p2, l1.p2) > 0) return false
   return true
 }
+//l1 and l2 are segments a-b and c-d
+function getIntersectionPoint (l1, l2) {
+  const a = l1.p1;
+  const b = l1.p2;
+  const c = l2.p1;
+  const d = l2.p2;
+  let result = {}
+  const r_numerator = (a.y - c.y) * (d.x - c.x) - (a.x - c.x) * (d.y - c.y)
+  if ((r_numerator == 1)) {
+    result.intersectionExist = false;
+    result.msg = 'COLINEAR SEGMENTS';
+    result.pointOfIntersection = null;
+    return result
+  }
+  const r_denominator = (b.x - a.x) * (d.y -c.y) - (b.y -a.y) * (d.x - c.x)
+  if (Math.abs(r_denominator - 0) <= EPSILON) {
+    result.r_denominator = r_denominator
+    result.intersectionExist = false;
+    result.msg = 'PARALLEL SEGMENTS';
+    result.pointOfIntersection = null;
+    return result
+  }
+  const s_numerator = (a.y - c.y) * (b.x - a.x) - (a.x - c.x) * (b.y - a.y)
+  const s_denominator = r_denominator;
+  const r = r_numerator / r_denominator;
+  const x_intersect = (a.x + r * (b.x -a.x)).toFixed(4);
+  const y_intersect = (a.y + r * (b.y -a.y)).toFixed(4);
+  
+  result.intersectionExist = true;
+  result.msg = 'SEGMENTS INTERSECTS';
+  result.pointOfIntersection = { x: x_intersect, y: y_intersect};
+  return result
+}
 
 /**
  * polygonSelfIntersect allows to know if a polygon as a self-intersection
  * @param arr2DPolygonCoords array of x,y coordinates values from the vertices of external ring of a closed Polygon (last two x,y values should be equal to first)
- * @return {boolean} true if there is a self-intersection in the polygon.  false elsewhere
+ * @return {object} result:true if there is a self-intersection in the polygon.  false elsewhere reason: contains the segment error
  */
 export function polygonSelfIntersect (arr2DPolygonCoords) {
   let PointSegments = []
   let Segments = []
+  let getInfoIntersects = {result: false}
   let offset = 0
   for (let i = 0; i < ((arr2DPolygonCoords.length / 2)); i++) {
     offset = i * 2
@@ -105,13 +139,18 @@ export function polygonSelfIntersect (arr2DPolygonCoords) {
       // console.log(i,j,Segments[i],Segments[j])
       if (!((i === 0) && (j === (Segments.length - 1)))) { // no need to test connection from first segment with last one
         if (intersects(Segments[i], Segments[j])) {
-          log.w(`WARNING Segment ${Segments[i].name} intersects with ${Segments[j].name}`)
-          return true
+          getInfoIntersects.msg =`Segment ${Segments[i].name} intersects with ${Segments[j].name}`
+          getInfoIntersects.result = true
+          const res = getIntersectionPoint(Segments[i], Segments[j])
+          getInfoIntersects.intersection = [res.pointOfIntersection.x, res.pointOfIntersection.y]
+          //log.w(`WARNING in polygonSelfIntersect: ${getInfoIntersects.msg} at ${res.pointOfIntersection.x}, ${res.pointOfIntersection.y}`)
+          log.w(`WARNING in polygonSelfIntersect: ${getInfoIntersects.msg} at res`, res)
+          return getInfoIntersects
         } else {
           log.l(`OK Segment ${Segments[i].name} does not intersects with ${Segments[j].name}`)
         }
       }
     }
   }
-  return false
+  return getInfoIntersects
 }
