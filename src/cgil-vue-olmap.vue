@@ -413,7 +413,7 @@ export default {
       log.t(`# in _updateGeometry geomWkt : ${this.geomWkt}\n geomGeoJSON: ${this.geomGeoJSON}`)
       if ((!isNullOrUndefined(this.geomWkt)) && (this.geomWkt.length > 5)) {
         log.t(`# in _updateGeometry for geomWkt`, this.geomWkt)
-        // TODO check for identical features and do not add them twice
+        // TODO check for identical features and do not add them twice or clear layer before ?
         const numFeaturesAdded = addWktPolygonToLayer(this.ol_newFeaturesLayer, this.geomWkt, this.maxFeatureIdCounter)
         if (isNullOrUndefined(numFeaturesAdded)) {
           log.e(`# ERROR tying to add this invalid Geom from geomWkt : ${this.geomWkt}`, this.geomWkt)
@@ -423,7 +423,7 @@ export default {
         }
       }
       if (!isNullOrUndefined(this.geomGeoJSON)) {
-        // TODO check for identical features and do not add them twice
+        // TODO check for identical features and do not add them twice or clear layer before ?
         log.t(`# in _updateGeometry for geomGeoJSON`, this.geomGeoJSON)
         const numFeaturesAdded = addGeoJsonPolygonToLayer(this.ol_newFeaturesLayer, this.geomGeoJSON, this.maxFeatureIdCounter)
         if (isNullOrUndefined(numFeaturesAdded)) {

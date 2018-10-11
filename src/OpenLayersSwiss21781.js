@@ -38,7 +38,8 @@ export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
 export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
 const MODULE_NAME='OpenLayersSwiss21781';
 const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 2);
-const baseWmtsUrl = 'https://map.lausanne.ch/tiles' // valid on internet
+// TODO adapter url ci-dessous /interne - externe
+const baseWmtsUrl = 'https://tiles01.lausanne.ch/tiles' // valid on internet
 const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
 const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
@@ -224,6 +225,15 @@ function initWmtsLayers (initialBaseLayer) {
     visible: (initialBaseLayer === 'orthophotos_ortho_lidar_2016'),
     source: wmtsLausanneSource('orthophotos_ortho_lidar_2016', {
       timestamps: [2016],
+      format: 'png'
+    })
+  }))
+  arrayWmts.push(new OlLayerTile({
+    title: 'Plan cadastral souterrain (gris)',
+    type: 'base',
+    visible: (initialBaseLayer === 'fonds_geo_conduites'),
+    source: wmtsLausanneSource('fonds_geo_conduites', {
+      timestamps: [2018],
       format: 'png'
     })
   }))
@@ -952,7 +962,7 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
   if (isNullOrUndefined(olLayer)) {
     return null
   } else {
-    let id = 0
+    let id = baseCounter
     let source = olLayer.getSource()
     const formatGeoJSON = new OlFormatGeoJSON()
     let feature = formatGeoJSON.readFeature(GeoJSONGeometry, {
@@ -971,10 +981,13 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
           })
           if (isValidPolygon(polygonFeature)) {
             id += 1 // increment counter
-            polygonFeature.setId(id + baseCounter)
+            polygonFeature.setId(id)
+            polygonFeature.setProperties({'id': id})
+            polygonFeature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
             source.addFeature(polygonFeature)
           } else {
-            log.e('## Error MULTIPOLYGON IS NOT VALID')
+            log.e('## Error in addGeoJsonPolygonToLayer : MULTIPOLYGON IS NOT VALID')
+            log.e('## Error in addGeoJsonPolygonToLayer : invalid polygon is this one:',dumpFeatureToString(polygonFeature))
             return null
           }
         })
@@ -983,10 +996,13 @@ export function addGeoJsonPolygonToLayer (olLayer, GeoJSONGeometry, baseCounter)
         if (isValidPolygon(feature)) {
           // let's use this one as it is
           id += 1 // increment counter
-          feature.setId(id + baseCounter)
+          feature.setId(id)
+          feature.setProperties({'id': id})
+          feature.setProperties({'title': `POLYGONE [${id}] VALIDE`})
           source.addFeature(feature)
         } else {
-          log.e('## Error POLYGON IS NOT VALID')
+          log.e('## Error in addWktPolygonToLayer : POLYGON IS NOT VALID')
+          log.e('## Error in addWktPolygonToLayer : invalid polygon is this one:',dumpFeatureToString(feature))
           return null
         }
         break

@@ -74,7 +74,7 @@
                    :center="center"
                    :zoom="8"
                    :geomWkt="initialGeom"
-                   baselayer="fonds_geo_osm_bdcad_gris"
+                   baselayer="fonds_geo_conduites"
                    :geojsondata="geojson"
                    @gomapSaveGeomClick="saveGeometry"
                    @mapclick="handleMapCLick"
