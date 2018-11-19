@@ -71,10 +71,11 @@
     <div class="my-map" v-show="isMapVisible">
       <cgil-ol-map ref="mymap"
                    :edit-geom-enabled="isEditEnable"
+                   :use-internal-wmts="false"
                    :center="center"
                    :zoom="8"
                    :geomWkt="initialGeom"
-                   baselayer="fonds_geo_conduites"
+                   baselayer="fonds_geo_osm_bdcad_gris"
                    :geojsondata="geojson"
                    @gomapSaveGeomClick="saveGeometry"
                    @mapclick="handleMapCLick"

@@ -339,6 +339,10 @@ export default {
       type: String,
       default: 'fonds_geo_osm_bdcad_couleur'
     },
+    useInternalWmts: { // will use lausanne internal 'https://tiles01.lausanne.ch/tiles' instead of public one
+      type: Boolean,
+      default: false
+    },
     editGeomEnabled: { // goign from true to false will triger a call to clearNewFeatures to reset mode to navigate and clear current editing
       type: Boolean,
       default: false
@@ -375,6 +379,9 @@ export default {
     },
     geomGeoJSON: function () {
       this._updateGeometry()
+    },
+    geojsondata:  function (newValue, oldValue){
+      log.t(`## in geojsondata watch old: ${oldValue}, new: ${newValue}`)
     },
     editGeomEnabled: function (newValue, oldValue) {
       log.t(`## in editGeomEnabled watch old: ${oldValue}, new: ${newValue}`)
@@ -636,6 +643,13 @@ export default {
     this.geoAdrUrl = `${BASE_REST_API_URL}adresses/search_position?ofs=${this.currentOfsFilter}`
     // this.$refs.mysearch.setAjaxDataSource(this.geoAdrUrl)
     this.arrListCities = listCities
+    if (this.useInternalWmts) {
+      this.layerOptions.push( {
+        value: 'fonds_geo_conduites',
+        label: 'Plan cadastral souterrain (gris)'
+      }
+      )
+    }
     this.ol_view = getOlView(this.center, this.zoom)
     if (this.$refs.mymap.clientWidth < 626) {
       this.isSmallScreen = true
@@ -645,7 +659,10 @@ export default {
       this.sizeOfControl = 'small'
     }
     this.activeLayer = this.baselayer;
-    this.ol_map = getOlMap(this.$refs.mymap, this.ol_view, this.baselayer, this.geojsondata )
+    this.ol_map = getOlMap(this.$refs.mymap,
+                           this.ol_view,
+                           this.baselayer,
+                           this.geojsondata, null, this.useInternalWmts )
     if (this.geojsonurl.length > 4) {
       log.l(`will enter in loadGeoJsonUrlPolygonLayer(geojsonurl:${this.geojsonurl}`);
       loadGeoJsonUrlPolygonLayer(this.ol_map, this.geojsonurl,

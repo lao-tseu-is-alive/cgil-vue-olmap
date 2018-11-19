@@ -33,13 +33,12 @@ import OlStyle from 'ol/style/Style'
 import OlTileGridWMTS from 'ol/tilegrid/WMTS'
 import proj4 from 'proj4'
 import {distance2Point, pointsIsEqual, EPSILON, polygonSelfIntersect} from './2dGeom'
-// in EPSG:21781 we don't want to allow points of same polygon in same cm
+// we want to limit minimum distance of points of same polygon
 export const MIN_DISTANCE_BETWEEN_POINTS = 0.5
-export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781
+export const DIGITIZE_PRECISION = 2 // cm is enough in EPSG:21781 inside a browser
 const MODULE_NAME='OpenLayersSwiss21781';
 const log = (DEV) ? new Log(MODULE_NAME, 4) : new Log(MODULE_NAME, 2);
-// TODO adapter url ci-dessous /interne - externe
-const baseWmtsUrl = 'https://tiles01.lausanne.ch/tiles' // valid on internet
+
 const RESOLUTIONS = [50, 20, 10, 5, 2.5, 1, 0.5, 0.25, 0.1, 0.05]
 const MAX_EXTENT_LIDAR = [532500, 149000, 545625, 161000] // lidar 2012
 proj4.defs('EPSG:21781', '+proj=somerc +lat_0=46.95240555555556 +lon_0=7.439583333333333 +k_0=1 +x_0=600000 +y_0=200000 +ellps=bessel +towgs84=674.4,15.1,405.3,0,0,0,0 +units=m +no_defs')
@@ -91,9 +90,6 @@ export function Conv3857To21781 (x, y) {
   const projDest = new proj4.Proj('EPSG:21781')
   return proj4.transform(projSource, projDest, [x, y])
 }
-
-
-// const vdlWmts = initWmtsLayers()
 
 const overlayStyle = (function () {
   /* jshint -W069 */
@@ -157,41 +153,46 @@ const overlayStyle = (function () {
   /* jshint +W069 */
 })()
 
-/**
- * Allow to retrieve a valid OpenLayers WMTS source object
- * @param {string} layer  : the name of the WMTS layer
- * @param {object} options
- * @return {ol.source.WMTS} : a valid OpenLayers WMTS source
- */
-function wmtsLausanneSource (layer, options) {
-  let resolutions = RESOLUTIONS
-  if (Array.isArray(options.resolutions)) {
-    resolutions = options.resolutions
-  }
-  const tileGrid = new OlTileGridWMTS({
-    origin: [420000, 350000],
-    resolutions: resolutions,
-    matrixIds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  })
-  const extension = options.format || 'png'
-  const timestamp = options.timestamps
-  let url = baseWmtsUrl + '/1.0.0/{Layer}/default/' + timestamp +
-    '/swissgrid_05/{TileMatrix}/{TileRow}/{TileCol}.' + extension
-  url = url.replace('http:', location.protocol)
-  // noinspection ES6ModulesDependencies
-  return new OlSourceWMTS(/** @type {olx.source.WMTSOptions} */{
-    // crossOrigin: 'anonymous',
-    attributions: `&copy;<a "href='http://www.lausanne.ch/cadastre>Cadastre'>SGLEA-C Lausanne</a>`,
-    url: url,
-    tileGrid: tileGrid,
-    layer: layer,
-    requestEncoding: 'REST'
-  })
-}
-
-function initWmtsLayers (initialBaseLayer) {
+function initWmtsLayers ( initialBaseLayer, useInternalWmts = false) {
   log.t(`# in initWmtsLayers(baselayer=${initialBaseLayer}`)
+  const internalBaseWmtsUrl = 'https://tiles01.lausanne.ch/tiles'
+  const externalBaseWmtsUrl = 'https://map.lausanne.ch/tiles'
   let arrayWmts = []
+  const baseWmtsUrl  = useInternalWmts ? internalBaseWmtsUrl : externalBaseWmtsUrl
+  
+    /**
+   * Allow to retrieve a valid OpenLayers WMTS source object
+   * @param {string} layer  : the name of the WMTS layer
+   * @param {object} options
+   * @return {ol.source.WMTS} : a valid OpenLayers WMTS source
+   */
+  function wmtsLausanneSource (layer, options) {
+    let resolutions = RESOLUTIONS
+    log.t(`# in wmtsLausanneSource(baseWmtsUrl=${baseWmtsUrl}, layer=${layer}`)
+    if (Array.isArray(options.resolutions)) {
+      resolutions = options.resolutions
+    }
+    const tileGrid = new OlTileGridWMTS({
+      origin: [420000, 350000],
+      resolutions: resolutions,
+      matrixIds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    })
+    const extension = options.format || 'png'
+    const timestamp = options.timestamps
+    let url = baseWmtsUrl + '/1.0.0/{Layer}/default/' + timestamp +
+      '/swissgrid_05/{TileMatrix}/{TileRow}/{TileCol}.' + extension
+    url = url.replace('http:', location.protocol)
+    // noinspection ES6ModulesDependencies
+    return new OlSourceWMTS(/** @type {olx.source.WMTSOptions} */{
+      // crossOrigin: 'anonymous',
+      attributions: `&copy;<a "href='http://www.lausanne.ch/cadastre>Cadastre'>SGLEA-C Lausanne</a>`,
+      url: url,
+      tileGrid: tileGrid,
+      layer: layer,
+      requestEncoding: 'REST'
+    })
+  }
+  
   arrayWmts.push(new OlLayerTile({
     title: 'Plan ville couleur',
     type: 'base',
@@ -228,15 +229,18 @@ function initWmtsLayers (initialBaseLayer) {
       format: 'png'
     })
   }))
-  arrayWmts.push(new OlLayerTile({
-    title: 'Plan cadastral souterrain (gris)',
-    type: 'base',
-    visible: (initialBaseLayer === 'fonds_geo_conduites'),
-    source: wmtsLausanneSource('fonds_geo_conduites', {
-      timestamps: [2018],
-      format: 'png'
-    })
-  }))
+  if (useInternalWmts) {
+    arrayWmts.push(new OlLayerTile({
+                                     title: 'Plan cadastral souterrain (gris)',
+                                     type: 'base',
+                                     visible: (initialBaseLayer === 'fonds_geo_conduites'),
+                                     source: wmtsLausanneSource(
+                                     'fonds_geo_conduites', {
+                                       timestamps: [2018],
+                                       format: 'png'
+                                     })
+                                   }))
+  }
   arrayWmts.push(new OlLayerTile({
     title: 'Carte Nationale',
     type: 'base',
@@ -271,6 +275,7 @@ export function getOlMap (divMap,
                           baseLayer = 'fonds_geo_osm_bdcad_couleur',
                           geojsonData = null,
                           clickCallback = null,
+                          useInternalWMTS = false
                           ) {
   log.t(`In getOlMap(${divMap}, .. baseLayer= ${baseLayer}, geojsonData`)
   let olMousePosition = new OlMousePosition({
@@ -282,7 +287,8 @@ export function getOlMap (divMap,
     undefinedHTML: '&nbsp;'
     */
   })
-  const arrLayers = initWmtsLayers(baseLayer);
+  const arrLayers = initWmtsLayers(baseLayer, useInternalWMTS )
+  
   let newVectorLayer = null;
   if (!isNullOrUndefined(geojsonData)) {
     log.l(`# will load GeoJSON Polygon Layer( geojsondata:${geojsonData.features.lenght}`, geojsonData)
@@ -1199,4 +1205,4 @@ export function flyTo(finalLocation, finalZoom, theOlView, done) {
           zoom: finalZoom,
           duration: duration / 2
         }, callback);
-      }
+}
