@@ -71,7 +71,7 @@
     <div class="my-map" v-show="isMapVisible">
       <cgil-ol-map ref="mymap"
                    :edit-geom-enabled="isEditEnable"
-                   :use-internal-wmts="false"
+                   :use-internal-wmts="true"
                    :center="center"
                    :zoom="8"
                    :geomWkt="initialGeom"
@@ -119,7 +119,7 @@ export default {
   data () {
     return {
       title: 'Testing cgil-vue-olmap',
-      isMapVisible: true,
+      isMapVisible: false,
       isEditEnable: true,
       center: pos,
       geojson: geodata,

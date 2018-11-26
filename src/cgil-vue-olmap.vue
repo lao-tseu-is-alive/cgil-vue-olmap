@@ -209,7 +209,7 @@
             </template>
         </el-header>
         <el-main  style="padding: 0">
-          <div ref="mymap" class="map-content">
+          <div id="mymap" ref="mymap" class="map-content">
             <div ref="tooltip" class="tooltip"></div>
           </div>
         </el-main>
@@ -629,8 +629,23 @@ export default {
           }
           this.ol_map.updateSize()
         } else {
-          log.l(`# updateScreen screen mymap Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`, this.$refs.mainzone)
-          // this.ol_map.updateSize()
+          log.l(`## updateScreen screen main WxH: ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`, this.$refs.mainzone)
+          log.l(`## updateScreen screen mymap WxH: ${this.$refs.mymap.clientWidth} x ${this.$refs.mymap.clientHeight}`, this.$refs.mymap)
+          const refThis = this
+          window.setTimeout(function () {
+            log.l(`### setTimeout in updateScreen main WxH: ${refThis.$refs.mainzone.clientWidth} x ${refThis.$refs.mainzone.clientHeight}`)
+            log.l(`### setTimeout in updateScreen mymap WxH: ${refThis.$refs.mymap.clientWidth} x ${refThis.$refs.mymap.clientHeight}`)
+            //let x = (refThis.ol_map).renderer.canvas_;
+            refThis.$refs.mainzone.style.display = 'block';
+            refThis.$refs.mymap.style.display = 'block';
+            // next line because of : https://github.com/openlayers/openlayers/issues/4817
+            // and of : https://github.com/openlayers/openlayers/issues/8888
+            // thank you so much ol for doing such "strange" things like putting display:none in your canvas...
+            // can also do : m=document.getElementById('mymap'); m.getElementsByTagName('canvas')[0].style.display=''
+            refThis.$refs.mymap.getElementsByTagName('canvas')[0].style.display=''
+            refThis.ol_map.render();
+            refThis.ol_map.updateSize()
+          }, 500)
         }
       } else {
         log.t(`# updateScreen screen Width x Height : this.$refs.mainzone is undefined`, this.$refs.mainzone)
@@ -846,7 +861,7 @@ export default {
         log.t(`## END GoMap click callback : ${Number(evt.coordinate[0]).toFixed(2)},${Number(evt.coordinate[1]).toFixed(2)}`)
       })
     window.onresize = () => {
-      // log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
+      log.l(`## GoMap IN onresize client Width x Height : ${this.$refs.mainzone.clientWidth} x ${this.$refs.mainzone.clientHeight}`)
       this.ol_map.updateSize()
       this.updateScreen()
     }
